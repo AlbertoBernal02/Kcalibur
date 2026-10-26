@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { loadGoals } from "@/lib/data/profile";
 import { toISO } from "@/lib/meals";
 import { createClient } from "@/lib/supabase/client";
+import { PhotosCard } from "@/components/photos-card";
 import { StatsSection } from "@/components/stats-section";
 import { WaterCard } from "@/components/water-card";
 import { WeightCard } from "@/components/weight-card";
@@ -49,6 +50,7 @@ export function ProgressView() {
 
       <StatsSection today={today} days={r.days} goalKcal={goalKcal} />
       <WeightCard today={today} days={r.weightDays} />
+      <PhotosCard today={today} />
     </>
   );
 }
