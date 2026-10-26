@@ -3,18 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { friendlyAuthError } from "@/lib/auth-errors";
 import { createClient } from "@/lib/supabase/client";
-
-// Traduce los errores habituales de Supabase Auth a mensajes claros.
-function friendlyError(message: string): string {
-  if (/invalid login credentials/i.test(message)) return "Email o contraseña incorrectos.";
-  if (/already registered/i.test(message)) return "Ese email ya tiene cuenta. Inicia sesión.";
-  if (/password should be at least/i.test(message)) return "La contraseña debe tener al menos 6 caracteres.";
-  if (/email not confirmed/i.test(message)) return "Confirma tu email antes de entrar.";
-  if (/rate limit/i.test(message)) return "Demasiados intentos. Espera un momento.";
-  if (/fetch/i.test(message)) return "No hay conexión con el servidor.";
-  return message;
-}
 
 // Formulario compartido de login / registro.
 export function AuthForm({ mode }: { mode: "login" | "registro" }) {
@@ -37,7 +27,7 @@ export function AuthForm({ mode }: { mode: "login" | "registro" }) {
       : await supabase.auth.signUp({ email, password });
     setLoading(false);
 
-    if (error) return setError(friendlyError(error.message));
+    if (error) return setError(friendlyAuthError(error.message));
     // Sin sesión tras registrarse = el proyecto exige confirmar el email.
     if (!data.session) return setInfo("Revisa tu correo para confirmar la cuenta.");
     router.replace("/");
@@ -91,6 +81,11 @@ export function AuthForm({ mode }: { mode: "login" | "registro" }) {
         >
           {loading ? "Un momento…" : isLogin ? "Entrar" : "Crear cuenta"}
         </button>
+        {isLogin && (
+          <Link href="/recuperar" className="flex h-11 items-center justify-center text-sm font-medium text-subtle">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        )}
       </form>
 
       <p className="text-center text-sm text-subtle">

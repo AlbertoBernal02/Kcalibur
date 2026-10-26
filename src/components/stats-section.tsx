@@ -59,16 +59,19 @@ export function StatsSection({ today, days, goalKcal }: { today: string; days: n
         <p className="mb-4 text-sm text-subtle">Aún no hay comidas registradas en este periodo.</p>
       )}
 
-      <BarChart
-        days={range.map((date) => ({ date, value: byDate.get(date)?.kcal || null }))}
-        goal={goalKcal}
-        unit="kcal"
-        label={`Calorías de los últimos ${days} días`}
-        detail={(date) => {
-          const t = byDate.get(date)!;
-          return `P ${nf(t.protein_g)} · H ${nf(t.carbs_g)} · G ${nf(t.fat_g)}`;
-        }}
-      />
+      {/* Sin ningún día registrado no se dibuja la gráfica (solo tendría ejes vacíos) */}
+      {s.loggedDays > 0 && (
+        <BarChart
+          days={range.map((date) => ({ date, value: byDate.get(date)?.kcal || null }))}
+          goal={goalKcal}
+          unit="kcal"
+          label={`Calorías de los últimos ${days} días`}
+          detail={(date) => {
+            const t = byDate.get(date)!;
+            return `P ${nf(t.protein_g)} · H ${nf(t.carbs_g)} · G ${nf(t.fat_g)}`;
+          }}
+        />
+      )}
     </section>
   );
 }

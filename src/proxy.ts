@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Rutas accesibles sin sesión.
-const PUBLIC = ["/login", "/registro"];
+// Pantallas de acceso: solo sin sesión (con sesión se redirige al diario).
+const AUTH_ONLY = ["/login", "/registro", "/recuperar"];
+// Accesible con y sin sesión: el enlace del email crea la sesión en esta propia pantalla.
+const OPEN = ["/restablecer"];
 
 // Refresca la sesión de Supabase y redirige según esté o no autenticado.
 export async function proxy(request: NextRequest) {
@@ -26,10 +28,11 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const isPublic = PUBLIC.includes(request.nextUrl.pathname);
+  const path = request.nextUrl.pathname;
+  const isAuthPage = AUTH_ONLY.includes(path);
 
-  if (!user && !isPublic) return NextResponse.redirect(new URL("/login", request.url));
-  if (user && isPublic) return NextResponse.redirect(new URL("/", request.url));
+  if (!user && !isAuthPage && !OPEN.includes(path)) return NextResponse.redirect(new URL("/login", request.url));
+  if (user && isAuthPage) return NextResponse.redirect(new URL("/", request.url));
   return response;
 }
 

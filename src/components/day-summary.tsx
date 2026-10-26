@@ -11,6 +11,21 @@ const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 export function DaySummary({ entries, goals }: { entries: Entry[]; goals: Goals | null }) {
   const t = totals(entries);
 
+  if (!goals && t.kcal === 0) {
+    // Primera vez: sin objetivos ni comidas, se explica el primer paso en vez de mostrar ceros.
+    return (
+      <div className="mb-5 rounded-3xl bg-card p-5">
+        <p className="text-lg font-bold">¡Bienvenido a Kcalibur!</p>
+        <p className="mt-1 text-sm text-subtle">
+          Empieza calculando tu gasto y tus objetivos de macros, y luego añade tu primera comida con el botón +.
+        </p>
+        <Link href="/perfil" className="mt-3 inline-flex h-11 items-center text-sm font-semibold text-primary">
+          Configurar mi perfil →
+        </Link>
+      </div>
+    );
+  }
+
   if (!goals) {
     return (
       <div className="mb-5 rounded-3xl bg-card p-5">
