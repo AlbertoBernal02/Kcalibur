@@ -35,7 +35,9 @@ export async function POST(request: Request) {
   const parsed = parseChatRequest(await request.json().catch(() => null));
   if (typeof parsed === "string") return json({ error: parsed }, 400);
 
-  const context = buildContext(await loadAiData(sb, parsed.date));
+  // Los valores de referencia se eligen con las dos últimas preguntas del usuario (cubre los seguimientos).
+  const userTexts = parsed.messages.filter((m) => m.role === "user").slice(-2).map((m) => m.content);
+  const context = buildContext(await loadAiData(sb, parsed.date, userTexts));
 
   // Petición a la API compatible con OpenAI (Groq por defecto). Se hace antes de abrir el stream para poder
   // devolver un error HTTP normal si el proveedor falla.

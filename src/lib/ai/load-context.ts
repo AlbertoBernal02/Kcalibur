@@ -3,16 +3,16 @@ import { loadDailyTotals, loadWeights } from "@/lib/data/tracking";
 import { addDays } from "@/lib/meals";
 import { ageFromBirth, type Activity, type Goal, type Goals, type Sex } from "@/lib/nutrition";
 import { mealTotals } from "@/lib/recipes";
-import type { AiData } from "@/lib/ai/context";
+import { pickReferenceFoods, type AiData, type RefFood } from "@/lib/ai/context";
 
 // Lee del servidor (con la sesión del usuario y RLS) lo que el asistente necesita saber.
 // Un fallo en un bloque no tumba la consulta: ese bloque va vacío y el asistente lo tratará como "sin datos".
-export async function loadAiData(sb: SupabaseClient, date: string): Promise<AiData> {
+export async function loadAiData(sb: SupabaseClient, date: string, recentTexts: string[] = []): Promise<AiData> {
   const [y, m, d] = date.split("-").map(Number);
   const todayDate = new Date(y, m - 1, d);
   // Las consultas directas de supabase-js no lanzan: ante un error devuelven data null (se trata como "sin datos").
   // Solo las dos funciones auxiliares sí lanzan, y se envuelven para que un fallo no tumbe el chat.
-  const [profile, goals, entries, days, weights, diets, options] = await Promise.all([
+  const [profile, goals, entries, days, weights, diets, options, foods] = await Promise.all([
     sb.from("profiles").select("sex, birth_date, height_cm, weight_kg, activity, goal").maybeSingle(),
     sb.from("goals").select("kcal, protein_g, carbs_g, fat_g").maybeSingle(),
     sb.from("diary_entries").select("meal, name, grams, kcal, protein_g, carbs_g, fat_g").eq("entry_date", date).order("created_at"),
@@ -20,6 +20,8 @@ export async function loadAiData(sb: SupabaseClient, date: string): Promise<AiDa
     loadWeights(sb, addDays(date, -30)).catch(() => []),
     sb.from("diets").select("id, name, notes").order("created_at"),
     sb.from("saved_meals").select("name, diet_id, diet_meal, saved_meal_items(name, grams, kcal, protein_g, carbs_g, fat_g)").not("diet_id", "is", null).order("created_at"),
+    // Catálogo (genéricos + propios): solo se envían al modelo las filas que se mencionan en la conversación.
+    sb.from("foods").select("name, state, kcal_100g, protein_100g, carbs_100g, fat_100g").limit(1000),
   ]);
 
   type Item = { name: string; grams: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number };
@@ -32,6 +34,10 @@ export async function loadAiData(sb: SupabaseClient, date: string): Promise<AiDa
       ? { sex: p.sex, age: p.birth_date ? ageFromBirth(p.birth_date, todayDate) : null, height_cm: p.height_cm, weight_kg: p.weight_kg, activity: p.activity, goal: p.goal }
       : null,
     goals: goals.data as Goals | null,
+    reference: pickReferenceFoods(
+      recentTexts,
+      ((foods.data ?? []) as RefFood[]).map((f) => ({ ...f, kcal_100g: Number(f.kcal_100g), protein_100g: Number(f.protein_100g), carbs_100g: Number(f.carbs_100g), fat_100g: Number(f.fat_100g) })),
+    ),
     today: (entries.data ?? []) as AiData["today"],
     days: days.filter((x) => x.kcal > 0),
     weights,

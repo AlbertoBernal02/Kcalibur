@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildContext, type AiData } from "./context.ts";
+import { buildContext, pickReferenceFoods, type AiData } from "./context.ts";
 import { createRateLimiter, parseChatRequest } from "./request.ts";
 
 const base: AiData = {
@@ -31,6 +31,23 @@ test("contexto: sin objetivos ni comidas no inventa datos", () => {
   assert.match(c, /Objetivos diarios: sin definir/);
   assert.match(c, /nada registrado todavía/);
   assert.match(c, /Perfil: sin datos/);
+});
+
+test("referencia: elige los alimentos que se mencionan, sin acentos y sin palabras vacías", () => {
+  const foods = [
+    { name: "Arroz blanco", state: "cooked" as const, kcal_100g: 130, protein_100g: 2.7, carbs_100g: 28, fat_100g: 0.3 },
+    { name: "Patata", state: "cooked" as const, kcal_100g: 86, protein_100g: 1.9, carbs_100g: 20, fat_100g: 0.1 },
+    { name: "Pollo", state: null, kcal_100g: 165, protein_100g: 31, carbs_100g: 0, fat_100g: 3.6 },
+  ];
+  const r = pickReferenceFoods(["¿Cuántas kcal cambia si cambio el ARROZ por patata en el desayuno?"], foods);
+  assert.deepEqual(r.map((f) => f.name), ["Arroz blanco", "Patata"]);
+  assert.deepEqual(pickReferenceFoods(["¿Cómo voy esta semana?"], foods), []);
+  assert.deepEqual(pickReferenceFoods([], foods), []);
+});
+
+test("referencia: se incluye en el contexto con sus valores", () => {
+  const c = buildContext({ ...base, reference: [{ name: "Patata", state: "cooked", kcal_100g: 86, protein_100g: 1.9, carbs_100g: 20, fat_100g: 0.1 }] });
+  assert.match(c, /Valores de referencia por 100 g.*Patata cocinado 86 kcal \(P 1\.9, H 20, G 0\.1\)/);
 });
 
 test("contexto: un perfil vacío se indica como sin datos", () => {

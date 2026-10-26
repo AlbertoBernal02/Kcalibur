@@ -2,6 +2,7 @@
 
 import { ArrowUp, Sparkles, Square, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { plainMath } from "@/lib/ai/format";
 import { toISO } from "@/lib/meals";
 import { cacheGet, cacheSet } from "@/lib/offline/store";
 
@@ -19,7 +20,7 @@ function Rich({ text }: { text: string }) {
   const inline = (s: string) => s.split(/(\*\*[^*]+\*\*)/g).map((p, i) => (p.startsWith("**") && p.endsWith("**") ? <strong key={i}>{p.slice(2, -2)}</strong> : p));
   return (
     <>
-      {text.split("\n").map((line, i) => {
+      {plainMath(text).split("\n").map((line, i) => {
         const t = line.replace(/^#{1,6}\s+/, "");
         const bullet = /^\s*[-*•]\s+/.test(t);
         return bullet ? (

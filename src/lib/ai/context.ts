@@ -11,7 +11,27 @@ export type AiData = {
   days: DayTotals[]; // últimos días con registro
   weights: { date: string; value: number }[];
   diets: { name: string; notes: string | null; options: { meal: string; name: string; kcal: number; protein_g: number; carbs_g: number; fat_g: number; items: string[] }[] }[];
+  reference?: RefFood[]; // valores por 100 g de los alimentos mencionados en la conversación
 };
+
+// Alimento de la base de datos de la app (valores por 100 g) para usar como referencia en las cuentas.
+export type RefFood = { name: string; state: "raw" | "cooked" | null; kcal_100g: number; protein_100g: number; carbs_100g: number; fat_100g: number };
+
+const STOPWORDS = new Set(["para", "cuantas", "cuantos", "cuanto", "cuanta", "como", "esta", "este", "esto", "esos", "esas", "cambia", "cambiar", "cambio", "opcion", "desayuno", "almuerzo", "merienda", "cena", "comida", "dieta", "kcal", "gramos", "proteina", "hidratos", "grasa", "tiene", "tengo", "puedo", "quiero", "mejor", "entre", "donde", "sobre", "luego", "hacer", "hago", "sino", "pero", "porque", "tambien"]);
+const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+// Alimentos de la base cuyo nombre contiene alguna palabra de los textos dados (pregunta actual y anterior).
+// Así el asistente calcula sustituciones con los mismos valores que la app sin enviar todo el catálogo.
+export function pickReferenceFoods(texts: string[], foods: RefFood[], limit = 10): RefFood[] {
+  const words = [...new Set(texts.flatMap((t) => norm(t).split(/[^a-z0-9]+/)).filter((w) => w.length >= 4 && !STOPWORDS.has(w)))];
+  if (!words.length) return [];
+  return foods
+    .map((f) => ({ f, score: words.filter((w) => norm(f.name).includes(w)).length }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || a.f.name.localeCompare(b.f.name))
+    .slice(0, limit)
+    .map((x) => x.f);
+}
 
 const MAX_CHARS = 6000; // tope del contexto (~1.700 tokens): cabe en los límites por minuto de los planes gratuitos
 const r = (n: number) => Math.round(n);
@@ -59,8 +79,16 @@ function sections(d: AiData, withItems: boolean): string[] {
   }
   if (d.weights.length) out.push("Peso registrado: " + d.weights.map((w) => `${w.date.slice(5)}: ${w.value} kg`).join(", "));
 
+  if (d.reference?.length) {
+    const st = { raw: " crudo", cooked: " cocinado" } as const;
+    out.push(
+      "Valores de referencia por 100 g de la base de alimentos de la app (úsalos para las cuentas en vez de tus estimaciones): " +
+        d.reference.map((f) => `${clean(f.name)}${f.state ? st[f.state] : ""} ${r(f.kcal_100g)} kcal (P ${f.protein_100g}, H ${f.carbs_100g}, G ${f.fat_100g})`).join("; "),
+    );
+  }
+
   if (d.diets.length) {
-    out.push("Dietas guardadas (opciones por comida):");
+    out.push("Dietas guardadas (opciones por comida; las kcal y macros de cada opción son los de la PRIMERA alternativa de cada alimento, y lo que va entre paréntesis son alternativas que pueden cambiar las kcal):");
     for (const diet of d.diets) {
       out.push(`- Dieta «${clean(diet.name)}»${diet.notes ? ` (notas: ${clean(diet.notes)})` : ""}`);
       for (const m of MEALS) {
