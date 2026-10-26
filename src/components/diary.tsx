@@ -1,12 +1,13 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { copyEntries, deleteEntry, loadDay, updateEntry, type Entry } from "@/lib/data/diary";
 import { loadGoals } from "@/lib/data/profile";
 import { createSavedMeal, entriesToItems } from "@/lib/data/saved-meals";
 import type { Goals } from "@/lib/nutrition";
 import { MEALS, addDays, dayLabel, longDate, relativeLabel, toISO, type Meal } from "@/lib/meals";
+import { getSyncState, subscribeSync } from "@/lib/offline/sync";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { AddToMealSheet } from "@/components/add-to-meal-sheet";
 import { DaySummary } from "@/components/day-summary";
@@ -61,6 +62,19 @@ function DiaryDay({ today }: { today: string }) {
     loadGoals(createClient()).then(setGoals).catch(() => setGoals(null));
   }, []);
 
+  // Al terminar una sincronización offline->servidor se recarga el día (el servidor puede haber rechazado algo).
+  const wasSyncing = useRef(false);
+  useEffect(
+    () =>
+      subscribeSync(() => {
+        const s = getSyncState();
+        const finished = wasSyncing.current && !s.syncing;
+        wasSyncing.current = s.syncing;
+        if (finished) reload(date).catch(() => undefined);
+      }),
+    [date, reload],
+  );
+
   // Carga el día; `stale` evita pisar el resultado si se cambia de día rápido.
   useEffect(() => {
     let stale = false;
@@ -102,7 +116,7 @@ function DiaryDay({ today }: { today: string }) {
     await mutate(async () => {
       const prev = await loadDay(createClient(), addDays(date, -1));
       if (prev.length === 0) throw new Error("vacío");
-      await copyEntries(createClient(), await currentUserId(), prev, date);
+      await copyEntries(createClient(), prev, date);
     }, "El día anterior no tiene entradas o no se pudo copiar.");
   }
 
@@ -213,7 +227,7 @@ function DiaryDay({ today }: { today: string }) {
           onCopy={(toDate, toMeal) =>
             mutate(async () => {
               const items = entries.filter((e) => e.meal === dialog.meal);
-              await copyEntries(createClient(), await currentUserId(), items, toDate, toMeal);
+              await copyEntries(createClient(), items, toDate, toMeal);
             }, "No se pudo copiar la comida.")
           }
           onSaveAsMeal={(name) =>

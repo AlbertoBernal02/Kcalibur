@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cachedRead } from "@/lib/offline/store";
 
 export type Category =
   | "carne" | "pescado" | "huevos" | "cereales" | "tuberculos" | "legumbres"
@@ -53,21 +54,23 @@ const COLS =
 
 // Todos los alimentos visibles + favoritos + último uso.
 // ponytail: se cargan todos y se filtra en cliente (PostgREST corta en 1000 filas); paginar si el catálogo crece.
-export async function listFoods(sb: SupabaseClient) {
-  const [foods, favs, usage] = await Promise.all([
-    sb.from("foods").select(COLS).order("name").limit(1000),
-    sb.from("food_favorites").select("food_id"),
-    sb.from("food_usage").select("food_id, last_used_at"),
-  ]);
-  if (foods.error) throw foods.error;
-  if (favs.error) throw favs.error;
-  if (usage.error) throw usage.error;
-  return {
-    foods: foods.data as Food[],
-    favorites: new Set(favs.data.map((r) => r.food_id as string)),
-    lastUsed: new Map(usage.data.map((r) => [r.food_id as string, r.last_used_at as string])),
-  };
-}
+// Con copia local: sin conexión se usa el último catálogo descargado.
+export const listFoods = (sb: SupabaseClient) =>
+  cachedRead("foods", async () => {
+    const [foods, favs, usage] = await Promise.all([
+      sb.from("foods").select(COLS).order("name").limit(1000),
+      sb.from("food_favorites").select("food_id"),
+      sb.from("food_usage").select("food_id, last_used_at"),
+    ]);
+    if (foods.error) throw foods.error;
+    if (favs.error) throw favs.error;
+    if (usage.error) throw usage.error;
+    return {
+      foods: foods.data as Food[],
+      favorites: new Set(favs.data.map((r) => r.food_id as string)),
+      lastUsed: new Map(usage.data.map((r) => [r.food_id as string, r.last_used_at as string])),
+    };
+  });
 
 export async function getFood(sb: SupabaseClient, id: string): Promise<Food | null> {
   const { data, error } = await sb.from("foods").select(COLS).eq("id", id).maybeSingle();

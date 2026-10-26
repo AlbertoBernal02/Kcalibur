@@ -7,7 +7,7 @@ import { foodLabel, type Food } from "@/lib/data/foods";
 import { addMealToDiary, listSavedMeals, type SavedMeal } from "@/lib/data/saved-meals";
 import { MEALS, type Meal } from "@/lib/meals";
 import { mealTotals, perServing, recipePer100, servingGrams } from "@/lib/recipes";
-import { createClient, currentUserId } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import { FoodPicker } from "@/components/food-picker";
 import { QuantityForm } from "@/components/quantity-form";
 import { Sheet } from "@/components/sheet";
@@ -46,7 +46,7 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
             submitLabel="Añadir"
             busy={busy}
             onSubmit={(grams, servingG, m) =>
-              onWrite(async () => addEntry(createClient(), await currentUserId(), {
+              onWrite(() => addEntry(createClient(), {
                 entry_date: date, meal, food_id: food.id, name: foodLabel(food), grams, serving_g: servingG, ...m,
               }), "No se pudo añadir la entrada.")
             }
@@ -64,7 +64,7 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
               submitLabel="Añadir"
               busy={busy}
               onSubmit={(grams, servingG, m) =>
-                onWrite(async () => addEntry(createClient(), await currentUserId(), {
+                onWrite(() => addEntry(createClient(), {
                   entry_date: date, meal, food_id: null, name: saved.name, grams, serving_g: servingG, ...m,
                 }), "No se pudo añadir la receta.")
               }
@@ -75,7 +75,7 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
               busy={busy}
               label={label}
               onAdd={() =>
-                onWrite(async () => addMealToDiary(createClient(), await currentUserId(), saved.items, date, meal), "No se pudo añadir la comida.")
+                onWrite(() => addMealToDiary(createClient(), saved.items, date, meal), "No se pudo añadir la comida.")
               }
             />
           )}

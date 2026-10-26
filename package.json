@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
+    "test": "node --experimental-strip-types --test \"src/lib/**/*.test.ts\"",
     "migrate": "node --env-file=.env.local scripts/migrate.mjs"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.118.0",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
+    "idb-keyval": "^6.3.0",
     "lucide-react": "^1.61.0",
     "next": "16.4.3",
     "react": "19.3.0",

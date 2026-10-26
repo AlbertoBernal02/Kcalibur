@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Entry } from "@/lib/data/diary";
+import { addEntries, type Entry } from "@/lib/data/diary";
 import type { Meal } from "@/lib/meals";
+import { cachedRead } from "@/lib/offline/store";
 
 export type Kind = "meal" | "recipe";
 
@@ -36,15 +37,16 @@ const fromRow = (r: Row): SavedMeal => ({
   items: [...r.saved_meal_items].sort((a, b) => a.position - b.position).map(toItem),
 });
 
-// Todas las comidas guardadas del usuario con sus elementos.
-export async function listSavedMeals(sb: SupabaseClient): Promise<SavedMeal[]> {
-  const { data, error } = await sb
-    .from("saved_meals")
-    .select(`id, name, kind, servings, saved_meal_items(${ITEM_COLS}, position)`)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data as unknown as Row[]).map(fromRow);
-}
+// Todas las comidas guardadas del usuario con sus elementos (con copia local para usarlas sin conexión).
+export const listSavedMeals = (sb: SupabaseClient): Promise<SavedMeal[]> =>
+  cachedRead("saved-meals", async () => {
+    const { data, error } = await sb
+      .from("saved_meals")
+      .select(`id, name, kind, servings, saved_meal_items(${ITEM_COLS}, position)`)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data as unknown as Row[]).map(fromRow);
+  });
 
 export async function getSavedMeal(sb: SupabaseClient, id: string): Promise<SavedMeal | null> {
   const { data, error } = await sb
@@ -96,9 +98,6 @@ export const entriesToItems = (entries: Entry[]): SavedItem[] =>
     food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g,
   }));
 
-// Añade todos los elementos de una comida guardada al diario (una entrada por elemento).
-export async function addMealToDiary(sb: SupabaseClient, userId: string, items: SavedItem[], date: string, meal: Meal) {
-  const rows = items.map((it) => ({ ...it, id: crypto.randomUUID(), user_id: userId, entry_date: date, meal }));
-  const { error } = await sb.from("diary_entries").insert(rows);
-  if (error) throw error;
-}
+// Añade todos los elementos de una comida guardada al diario (una entrada por elemento; funciona offline).
+export const addMealToDiary = (sb: SupabaseClient, items: SavedItem[], date: string, meal: Meal) =>
+  addEntries(sb, items.map((it) => ({ ...it, entry_date: date, meal })));
