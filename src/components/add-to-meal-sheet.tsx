@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { addEntry } from "@/lib/data/diary";
+import { listOptionsForMeal } from "@/lib/data/diets";
 import { foodLabel, type Food } from "@/lib/data/foods";
 import { addMealToDiary, listSavedMeals, type SavedMeal } from "@/lib/data/saved-meals";
 import { MEALS, type Meal } from "@/lib/meals";
@@ -25,7 +26,7 @@ type Props = {
 
 // Hoja para añadir a una comida: un alimento (gramos/raciones) o una comida guardada / receta.
 export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Props) {
-  const [mode, setMode] = useState<"foods" | "saved">("foods");
+  const [mode, setMode] = useState<"foods" | "saved" | "diet">("foods");
   const [food, setFood] = useState<Food | null>(null);
   const [saved, setSaved] = useState<SavedMeal | null>(null);
   const label = MEALS.find((m) => m.id === meal)!.label;
@@ -83,7 +84,7 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex rounded-2xl bg-muted p-1" role="tablist" aria-label="Origen">
-            {([["foods", "Alimentos"], ["saved", "Mis comidas"]] as const).map(([id, text]) => (
+            {([["foods", "Alimentos"], ["saved", "Mis comidas"], ["diet", "Dieta"]] as const).map(([id, text]) => (
               <button
                 key={id}
                 role="tab"
@@ -95,7 +96,7 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
               </button>
             ))}
           </div>
-          {mode === "foods" ? <FoodPicker onPick={setFood} /> : <SavedMealPicker onPick={setSaved} />}
+          {mode === "foods" ? <FoodPicker onPick={setFood} /> : mode === "saved" ? <SavedMealPicker onPick={setSaved} /> : <DietOptionPicker meal={meal} onPick={setSaved} />}
         </div>
       )}
     </Sheet>
@@ -140,6 +141,42 @@ function SavedMealPicker({ onPick }: { onPick: (m: SavedMeal) => void }) {
           </li>
         );
       })}
+    </ul>
+  );
+}
+
+// Opciones de dieta disponibles para esta comida (agrupadas por dieta).
+function DietOptionPicker({ meal, onPick }: { meal: Meal; onPick: (m: SavedMeal) => void }) {
+  const [options, setOptions] = useState<{ diet: string; option: SavedMeal }[] | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    listOptionsForMeal(createClient(), meal).then(setOptions).catch(() => setError(true));
+  }, [meal]);
+
+  if (error) return <p role="alert" className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">No se pudieron cargar tus dietas.</p>;
+  if (!options) return <div className="h-16 animate-pulse rounded-2xl bg-muted" aria-label="Cargando dieta" />;
+  if (options.length === 0)
+    return (
+      <p className="py-8 text-center text-sm text-subtle">
+        Ninguna dieta tiene opciones para esta comida.{" "}
+        <Link href="/comidas?tab=dietas" className="font-semibold text-primary">Ver dietas</Link>
+      </p>
+    );
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {options.map(({ diet, option }) => (
+        <li key={option.id}>
+          <button onClick={() => onPick(option)} className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3 text-left transition active:scale-[0.99]">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium">{option.name}</span>
+              <span className="block truncate text-sm text-subtle">{diet} · {option.items.length} alimentos</span>
+            </span>
+            <span className="font-semibold">{Math.round(mealTotals(option.items).kcal)} kcal</span>
+          </button>
+        </li>
+      ))}
     </ul>
   );
 }

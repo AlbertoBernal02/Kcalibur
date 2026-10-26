@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { foodLabel, type Food } from "@/lib/data/foods";
 import { createSavedMeal, deleteSavedMeal, getSavedMeal, updateSavedMeal, type Kind, type SavedItem } from "@/lib/data/saved-meals";
+import { MEALS, type Meal } from "@/lib/meals";
 import { mealTotals, perServing } from "@/lib/recipes";
 import { currentUserId, createClient } from "@/lib/supabase/client";
 import { FoodPicker } from "@/components/food-picker";
@@ -15,9 +16,13 @@ import { Button, Field, Section, inputCls } from "@/components/ui";
 
 type Dialog = { kind: "add"; food: Food | null } | { kind: "edit"; index: number };
 
-// Crear / editar una comida guardada o receta.
-export function SavedMealEditor({ id }: { id?: string }) {
+const mealName = (m: Meal) => MEALS.find((x) => x.id === m)!.label;
+
+// Crear / editar una comida guardada o receta, o una opción de dieta (si se pasa `dietId`).
+export function SavedMealEditor({ id, dietId, dietMeal }: { id?: string; dietId?: string; dietMeal?: Meal }) {
   const router = useRouter();
+  const isOption = !!dietId;
+  const backHref = isOption ? `/dietas/${dietId}` : "/comidas";
   const [name, setName] = useState("");
   const [kind, setKind] = useState<Kind>("meal");
   const [servings, setServings] = useState("1");
@@ -51,7 +56,7 @@ export function SavedMealEditor({ id }: { id?: string }) {
     setError(null);
     try {
       await action();
-      router.replace("/comidas");
+      router.replace(backHref);
     } catch {
       setError(failText);
       setBusy(false);
@@ -62,7 +67,8 @@ export function SavedMealEditor({ id }: { id?: string }) {
     if (!name.trim()) return setError("Ponle un nombre.");
     if (items.length === 0) return setError("Añade al menos un alimento.");
     if (kind === "recipe" && !(nServings > 0 && nServings <= 100)) return setError("Las raciones deben estar entre 0 y 100.");
-    const meal = { name: name.trim(), kind, servings: nServings, items };
+    // Al editar no se tocan los campos de dieta (la opción no cambia de dieta ni de comida).
+    const meal = { name: name.trim(), kind, servings: nServings, dietId: dietId ?? null, dietMeal: dietMeal ?? null, items };
     run(async () => {
       const userId = await currentUserId();
       if (id) await updateSavedMeal(createClient(), userId, id, meal);
@@ -79,10 +85,14 @@ export function SavedMealEditor({ id }: { id?: string }) {
 
   return (
     <>
-      <Link href="/comidas" className="mb-4 -ml-2 inline-flex h-12 items-center gap-1 px-2 text-primary">
-        <ChevronLeft size={22} /> Comidas
+      <Link href={backHref} className="mb-4 -ml-2 inline-flex h-12 items-center gap-1 px-2 text-primary">
+        <ChevronLeft size={22} /> {isOption ? "Dieta" : "Comidas"}
       </Link>
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">{id ? "Editar comida" : "Nueva comida"}</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">
+        {isOption
+          ? id ? "Editar opción" : `Nueva opción${dietMeal ? ` · ${mealName(dietMeal)}` : ""}`
+          : id ? "Editar comida" : "Nueva comida"}
+      </h1>
 
       {loading ? (
         <div className="h-64 animate-pulse rounded-3xl bg-muted" aria-label="Cargando comida" />
@@ -91,21 +101,23 @@ export function SavedMealEditor({ id }: { id?: string }) {
       ) : (
         <div className="flex flex-col gap-4">
           <Field label="Nombre">
-            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Ej. Desayuno de siempre" />
+            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={isOption ? "Ej. Opción con tostadas" : "Ej. Desayuno de siempre"} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Tipo">
-              <select className={inputCls} value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
-                <option value="meal">Comida guardada</option>
-                <option value="recipe">Receta</option>
-              </select>
-            </Field>
-            {kind === "recipe" && (
-              <Field label="Raciones">
-                <input className={inputCls} inputMode="decimal" value={servings} onChange={(e) => setServings(e.target.value)} />
+          {!isOption && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tipo">
+                <select className={inputCls} value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
+                  <option value="meal">Comida guardada</option>
+                  <option value="recipe">Receta</option>
+                </select>
               </Field>
-            )}
-          </div>
+              {kind === "recipe" && (
+                <Field label="Raciones">
+                  <input className={inputCls} inputMode="decimal" value={servings} onChange={(e) => setServings(e.target.value)} />
+                </Field>
+              )}
+            </div>
+          )}
 
           <Section title={`Alimentos (${items.length})`}>
             {items.length > 0 && (

@@ -17,11 +17,19 @@ export type SavedItem = {
   fat_g: number;
 };
 
-export type SavedMeal = { id: string; name: string; kind: Kind; servings: number; items: SavedItem[] };
+// `dietId`/`dietMeal` presentes = es una opción de una dieta (no sale en "Mis comidas").
+export type SavedMeal = {
+  id: string; name: string; kind: Kind; servings: number;
+  dietId: string | null; dietMeal: Meal | null; items: SavedItem[];
+};
 
 const ITEM_COLS = "food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g";
+export const MEAL_SELECT = `id, name, kind, servings, diet_id, diet_meal, saved_meal_items(${ITEM_COLS}, position)`;
 
-type Row = Omit<SavedMeal, "items"> & { saved_meal_items: (SavedItem & { position: number })[] };
+export type Row = {
+  id: string; name: string; kind: Kind; servings: number; diet_id: string | null; diet_meal: Meal | null;
+  saved_meal_items: (SavedItem & { position: number })[];
+};
 
 // Solo los campos de SavedItem: `position` no debe filtrarse (se reutilizan los elementos en inserts al diario).
 const toItem = (r: SavedItem): SavedItem => ({
@@ -29,31 +37,31 @@ const toItem = (r: SavedItem): SavedItem => ({
   kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g,
 });
 
-const fromRow = (r: Row): SavedMeal => ({
+export const fromRow = (r: Row): SavedMeal => ({
   id: r.id,
   name: r.name,
   kind: r.kind,
   servings: Number(r.servings),
+  dietId: r.diet_id,
+  dietMeal: r.diet_meal,
   items: [...r.saved_meal_items].sort((a, b) => a.position - b.position).map(toItem),
 });
 
-// Todas las comidas guardadas del usuario con sus elementos (con copia local para usarlas sin conexión).
+// Comidas guardadas sueltas del usuario con sus elementos (las opciones de dieta no entran aquí).
+// Con copia local para usarlas sin conexión.
 export const listSavedMeals = (sb: SupabaseClient): Promise<SavedMeal[]> =>
   cachedRead("saved-meals", async () => {
     const { data, error } = await sb
       .from("saved_meals")
-      .select(`id, name, kind, servings, saved_meal_items(${ITEM_COLS}, position)`)
+      .select(MEAL_SELECT)
+      .is("diet_id", null)
       .order("created_at", { ascending: false });
     if (error) throw error;
     return (data as unknown as Row[]).map(fromRow);
   });
 
 export async function getSavedMeal(sb: SupabaseClient, id: string): Promise<SavedMeal | null> {
-  const { data, error } = await sb
-    .from("saved_meals")
-    .select(`id, name, kind, servings, saved_meal_items(${ITEM_COLS}, position)`)
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await sb.from("saved_meals").select(MEAL_SELECT).eq("id", id).maybeSingle();
   if (error) throw error;
   return data ? fromRow(data as unknown as Row) : null;
 }
@@ -66,7 +74,10 @@ export async function createSavedMeal(
   sb: SupabaseClient, userId: string, meal: Omit<SavedMeal, "id">,
 ): Promise<string> {
   const id = crypto.randomUUID();
-  const m = await sb.from("saved_meals").insert({ id, user_id: userId, name: meal.name, kind: meal.kind, servings: meal.servings });
+  const m = await sb.from("saved_meals").insert({
+    id, user_id: userId, name: meal.name, kind: meal.kind, servings: meal.servings,
+    diet_id: meal.dietId, diet_meal: meal.dietMeal,
+  });
   if (m.error) throw m.error;
   const i = await sb.from("saved_meal_items").insert(itemRows(userId, id, meal.items));
   if (i.error) {

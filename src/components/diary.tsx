@@ -234,7 +234,7 @@ function DiaryDay({ today }: { today: string }) {
             mutate(
               async () => {
                 const items = entriesToItems(entries.filter((e) => e.meal === dialog.meal));
-                await createSavedMeal(createClient(), await currentUserId(), { name, kind: "meal", servings: 1, items });
+                await createSavedMeal(createClient(), await currentUserId(), { name, kind: "meal", servings: 1, dietId: null, dietMeal: null, items });
               },
               "No se pudo guardar la comida.",
               `«${name}» guardada en Comidas ✓`,
