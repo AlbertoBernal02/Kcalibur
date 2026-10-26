@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
     "migrate": "node --env-file=.env.local scripts/migrate.mjs"
   },
   "dependencies": {
