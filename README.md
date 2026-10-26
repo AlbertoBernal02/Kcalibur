@@ -11,7 +11,7 @@ PWA personal para registrar comidas y calcular **calorías y macros**, pensada p
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript estricto · Tailwind 4 · Supabase (Postgres + Auth + Storage, con RLS en todas las tablas) · `@zxing/browser` · `@anthropic-ai/sdk`.
+Next.js 16 (App Router) · TypeScript estricto · Tailwind 4 · Supabase (Postgres + Auth + Storage, con RLS en todas las tablas) · `@zxing/browser` · asistente sobre cualquier API compatible con OpenAI (Qwen 3 en Groq por defecto).
 
 ## Puesta en marcha (local)
 
@@ -33,13 +33,13 @@ Otros comandos: `npm test` (lógica pura), `npm run lint`, `npm run build`.
 | `NEXT_PUBLIC_SUPABASE_URL` | local + Vercel | URL del proyecto de Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | local + Vercel | Clave publicable (la seguridad la da RLS) |
 | `SUPABASE_DB_URL` | solo local | Cadena Postgres para `npm run migrate`. **No** subir a Vercel |
-| `ANTHROPIC_API_KEY` | local + Vercel (opcional) | Activa el asistente de IA. Solo servidor |
-| `ANTHROPIC_MODEL` | opcional | Modelo del asistente (por defecto `claude-opus-5-5`) |
+| `AI_API_KEY` | local + Vercel (opcional) | Activa el asistente de IA (clave gratuita de console.groq.com). Solo servidor |
+| `AI_MODEL`, `AI_BASE_URL`, `AI_REASONING_EFFORT` | opcional | Cambiar de modelo o de proveedor (cualquier API compatible con OpenAI) |
 
 ## Despliegue en Vercel
 
 1. Sube el repositorio a GitHub y, en Vercel, **Add New → Project** e importa el repo (Next.js se detecta solo).
-2. En **Environment Variables** añade `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (y `ANTHROPIC_API_KEY` si quieres el asistente). **Deploy**.
+2. En **Environment Variables** añade `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (y `AI_API_KEY` si quieres el asistente). **Deploy**.
 3. En Supabase → **Authentication → URL Configuration**: pon como *Site URL* tu dominio de Vercel y añade `https://TU-DOMINIO/restablecer` a *Redirect URLs* (necesario para recuperar la contraseña).
 4. Abre la URL en el iPhone con **Safari** → Compartir → **Añadir a pantalla de inicio**. Ábrela una vez con conexión para que se guarde para uso offline.
 

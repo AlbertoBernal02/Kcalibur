@@ -13,27 +13,25 @@ export type AiData = {
   diets: { name: string; notes: string | null; options: { meal: string; name: string; kcal: number; protein_g: number; carbs_g: number; fat_g: number; items: string[] }[] }[];
 };
 
-const MAX_CHARS = 9000; // tope del contexto: controla el coste y deja poco margen a datos de terceros largos
+const MAX_CHARS = 6000; // tope del contexto (~1.700 tokens): cabe en los límites por minuto de los planes gratuitos
 const r = (n: number) => Math.round(n);
 const clean = (s: string) => s.replace(/[\r\n<>]+/g, " ").slice(0, 120); // un nombre no puede cerrar la etiqueta ni romper líneas
 
 function sections(d: AiData, withItems: boolean): string[] {
   const out: string[] = [`Fecha de hoy: ${d.date}`];
 
-  if (d.profile) {
-    const p = d.profile;
-    out.push(
-      "Perfil: " +
-        [
-          p.sex && (p.sex === "male" ? "hombre" : "mujer"),
-          p.age !== null && `${p.age} años`,
-          p.height_cm && `${p.height_cm} cm`,
-          p.weight_kg && `${p.weight_kg} kg`,
-          p.activity && `actividad ${ACTIVITY[p.activity].label.toLowerCase()}`,
-          p.goal && `objetivo: ${GOAL[p.goal].label.toLowerCase()}`,
-        ].filter(Boolean).join(", "),
-    );
-  } else out.push("Perfil: sin datos.");
+  const p = d.profile;
+  const facts = p
+    ? [
+        p.sex && (p.sex === "male" ? "hombre" : "mujer"),
+        p.age !== null && `${p.age} años`,
+        p.height_cm && `${p.height_cm} cm`,
+        p.weight_kg && `${p.weight_kg} kg`,
+        p.activity && `actividad ${ACTIVITY[p.activity].label.toLowerCase()}`,
+        p.goal && `objetivo: ${GOAL[p.goal].label.toLowerCase()}`,
+      ].filter(Boolean)
+    : [];
+  out.push(facts.length ? `Perfil: ${facts.join(", ")}` : "Perfil: sin datos.");
 
   const t = d.today.reduce((a, e) => ({ k: a.k + e.kcal, p: a.p + e.protein_g, c: a.c + e.carbs_g, f: a.f + e.fat_g }), { k: 0, p: 0, c: 0, f: 0 });
   if (d.goals) {

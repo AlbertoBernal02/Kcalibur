@@ -3,7 +3,7 @@
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 export type ChatRequest = { messages: ChatMessage[]; date: string };
 
-export const LIMITS = { maxMessages: 20, maxChars: 4000 };
+export const LIMITS = { maxMessages: 20, maxChars: 4000, maxHistoryChars: 6000 };
 
 // Devuelve la petición validada y recortada, o un mensaje de error en español.
 export function parseChatRequest(body: unknown): ChatRequest | string {
@@ -22,7 +22,15 @@ export function parseChatRequest(body: unknown): ChatRequest | string {
     clean.push({ role, content: text });
   }
 
-  const recent = clean.slice(-LIMITS.maxMessages);
+  // Se conservan los mensajes más recientes hasta un tope de mensajes y de caracteres totales (los planes
+  // gratuitos limitan los tokens por minuto). El último mensaje siempre se conserva.
+  const recent: ChatMessage[] = [];
+  let chars = 0;
+  for (const m of [...clean].reverse()) {
+    if (recent.length >= LIMITS.maxMessages || (recent.length > 0 && chars + m.content.length > LIMITS.maxHistoryChars)) break;
+    recent.unshift(m);
+    chars += m.content.length;
+  }
   while (recent.length && recent[0].role !== "user") recent.shift(); // la conversación debe empezar por el usuario
   if (recent.length === 0 || recent[recent.length - 1].role !== "user") return "El último mensaje debe ser del usuario.";
   return { messages: recent, date };

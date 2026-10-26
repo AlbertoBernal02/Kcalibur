@@ -140,8 +140,9 @@ export function AssistantChat() {
         <div role="alert" className="rounded-3xl bg-card p-5">
           <p className="font-semibold">El asistente todavía no está activado</p>
           <p className="mt-1 text-sm text-subtle">
-            Falta la clave de la IA en el servidor. Añade <code className="rounded bg-muted px-1">ANTHROPIC_API_KEY</code> a las variables de entorno
-            (en <code className="rounded bg-muted px-1">.env.local</code> en local, o en Vercel) y reinicia la app.
+            Falta la clave de la IA en el servidor. Crea una gratis en <strong>console.groq.com</strong> (API Keys) y añádela como{" "}
+            <code className="rounded bg-muted px-1">AI_API_KEY</code> en <code className="rounded bg-muted px-1">.env.local</code> (o en las
+            variables de entorno de Vercel). Después reinicia la app.
           </p>
         </div>
       ) : (
