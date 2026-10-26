@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Plus, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { copyEntries, deleteEntry, loadDay, updateEntry, type Entry } from "@/lib/data/diary";
 import { loadGoals } from "@/lib/data/profile";
@@ -150,6 +151,10 @@ function DiaryDay({ today }: { today: string }) {
       )}
 
       {notice && <p role="status" className="mb-4 rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">{notice}</p>}
+
+      <Link href="/asistente" className="mb-4 flex h-12 items-center justify-center gap-2 rounded-2xl bg-card text-sm font-semibold text-primary transition active:scale-[0.99]">
+        <Sparkles size={18} /> Pregúntale al asistente
+      </Link>
 
       {/* Con un diálogo abierto el error se muestra dentro de él */}
       {error && !dialog && <p role="alert" className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}

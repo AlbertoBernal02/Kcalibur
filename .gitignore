@@ -42,3 +42,6 @@ next-env.d.ts
 
 # playwright
 .playwright-mcp/
+
+# plantilla de variables (sin secretos): sí se versiona
+!.env.example
