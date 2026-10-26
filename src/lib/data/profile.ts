@@ -24,10 +24,11 @@ export async function loadProfile(sb: SupabaseClient): Promise<{ profile: Profil
   return { profile: p.data as Profile | null, goals: g.data as Goals | null };
 }
 
-// Guarda perfil (update: la fila la crea el trigger) y objetivos (upsert).
-export async function saveProfile(sb: SupabaseClient, userId: string, profile: Profile, goals: Goals) {
+// Guarda perfil (update: la fila la crea el trigger) y, si se indican, los objetivos (upsert).
+export async function saveProfile(sb: SupabaseClient, userId: string, profile: Profile, goals: Goals | null) {
   const p = await sb.from("profiles").update(profile).eq("id", userId);
   if (p.error) throw p.error;
+  if (!goals) return;
   const g = await sb.from("goals").upsert({ user_id: userId, ...goals });
   if (g.error) throw g.error;
 }

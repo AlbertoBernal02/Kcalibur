@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES, foodLabel, listFoods, normalize, setFavorite, type Category, type Food } from "@/lib/data/foods";
 import { createClient } from "@/lib/supabase/client";
-import { inputCls } from "@/components/ui";
+import { inputBase } from "@/components/ui";
 
 type Tab = "all" | "fav" | "recent" | "mine";
 const TABS: { id: Tab; label: string }[] = [
@@ -84,15 +84,28 @@ export function FoodList() {
   return (
     <>
       <div className="sticky top-0 z-10 -mx-4 bg-background/95 px-4 pb-3 pt-1 backdrop-blur">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-subtle" size={20} />
-          <input
-            type="search"
-            placeholder="Buscar alimento…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className={`${inputCls} pl-12`}
-          />
+        <div className="flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-subtle" size={20} />
+            <input
+              type="search"
+              placeholder="Buscar alimento…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className={`${inputBase} h-12 w-full pl-12`}
+            />
+          </div>
+          <select
+            aria-label="Categoría"
+            value={cat}
+            onChange={(e) => setCat(e.target.value as Category | "")}
+            className={`${inputBase} h-12 w-36 shrink-0 px-3 text-sm`}
+          >
+            <option value="">Categoría</option>
+            {Object.entries(CATEGORIES).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
         </div>
         <div className="mt-3 flex rounded-2xl bg-muted p-1" role="tablist">
           {TABS.map((t) => (
@@ -109,17 +122,6 @@ export function FoodList() {
             </button>
           ))}
         </div>
-        <select
-          aria-label="Categoría"
-          value={cat}
-          onChange={(e) => setCat(e.target.value as Category | "")}
-          className={`${inputCls} mt-3 h-12`}
-        >
-          <option value="">Todas las categorías</option>
-          {Object.entries(CATEGORIES).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
       </div>
 
       {error && <p role="alert" className="mb-3 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
@@ -133,11 +135,15 @@ export function FoodList() {
       ) : visible.length === 0 ? (
         <p className="mt-10 text-center text-subtle">{EMPTY_TEXT[tab]}</p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        // pb-20: deja libre el último alimento bajo el botón flotante.
+        <ul className="flex flex-col gap-2 pb-20">
           {visible.map((f) => (
             <li key={f.id} className="flex items-center rounded-2xl bg-card">
               <Link href={`/alimentos/${f.id}`} className="min-w-0 flex-1 px-4 py-3">
-                <p className="truncate font-medium">{foodLabel(f)}</p>
+                <p className="flex items-center gap-2 font-medium">
+                  <span className="truncate">{foodLabel(f)}</span>
+                  {f.user_id && <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">Propio</span>}
+                </p>
                 <p className="truncate text-sm text-subtle">
                   {f.brand ? `${f.brand} · ` : ""}
                   {Math.round(f.kcal_100g)} kcal · P {f.protein_100g} · H {f.carbs_100g} · G {f.fat_100g}

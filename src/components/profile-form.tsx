@@ -86,16 +86,18 @@ export function ProfileForm() {
 
   const goalsNum = { kcal: num(f.kcal), protein_g: num(f.protein), carbs_g: num(f.carbs), fat_g: num(f.fat) };
   const macroKcal = [goalsNum.protein_g, goalsNum.carbs_g, goalsNum.fat_g].every((n) => n >= 0) ? kcalFromMacros(goalsNum) : null;
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
     const h = num(f.height), w = num(f.weight);
     if (f.height && !(h >= 100 && h <= 250)) return setMsg({ ok: false, text: "La altura debe estar entre 100 y 250 cm." });
     if (f.weight && !(w >= 30 && w <= 300)) return setMsg({ ok: false, text: "El peso debe estar entre 30 y 300 kg." });
+    // Objetivos: todo vacío = no se tocan; si se rellena alguno, deben estar los cuatro.
     const g = goalsNum;
-    if (![g.kcal, g.protein_g, g.carbs_g, g.fat_g].every((n) => Number.isFinite(n) && n >= 0) || g.kcal < 500)
-      return setMsg({ ok: false, text: "Completa los objetivos (mínimo 500 kcal)." });
+    const values = [g.kcal, g.protein_g, g.carbs_g, g.fat_g];
+    const anyGoal = values.some((n) => Number.isFinite(n));
+    if (anyGoal && (!values.every((n) => Number.isFinite(n) && n >= 0) || g.kcal < 500))
+      return setMsg({ ok: false, text: "Completa los cuatro objetivos (mínimo 500 kcal) o déjalos todos vacíos." });
 
     setSaving(true);
     try {
@@ -114,7 +116,9 @@ export function ProfileForm() {
           activity: f.activity || null,
           goal: f.goal || null,
         },
-        { kcal: Math.round(g.kcal), protein_g: Math.round(g.protein_g), carbs_g: Math.round(g.carbs_g), fat_g: Math.round(g.fat_g) },
+        anyGoal
+          ? { kcal: Math.round(g.kcal), protein_g: Math.round(g.protein_g), carbs_g: Math.round(g.carbs_g), fat_g: Math.round(g.fat_g) }
+          : null,
       );
       setMsg({ ok: true, text: "Guardado ✓" });
     } catch {

@@ -65,6 +65,12 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* Anillo de foco visible al navegar con teclado (no al tocar). */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* iOS hace zoom en inputs con fuente < 16px: lo evitamos */
 input,
 select,

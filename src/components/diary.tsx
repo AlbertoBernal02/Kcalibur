@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addEntry, copyEntries, deleteEntry, loadDay, updateEntry, type Entry } from "@/lib/data/diary";
 import { foodLabel, type Food } from "@/lib/data/foods";
-import { MEALS, addDays, dayLabel, toISO, type Meal } from "@/lib/meals";
+import { MEALS, addDays, dayLabel, longDate, relativeLabel, toISO, type Meal } from "@/lib/meals";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { FoodPicker } from "@/components/food-picker";
 import { QuantityForm } from "@/components/quantity-form";
@@ -20,14 +20,34 @@ type Dialog =
 const mealLabel = (m: Meal) => MEALS.find((x) => x.id === m)!.label;
 const sum = (list: Entry[], k: "kcal" | "protein_g" | "carbs_g" | "fat_g") => list.reduce((a, e) => a + e[k], 0);
 
+// "Hoy" se calcula tras montar: la página se prerrenderiza en el build y el servidor
+// no conoce ni la fecha ni la zona horaria del usuario (evita errores de hidratación).
 export function Diary() {
-  const [date, setDate] = useState(() => toISO(new Date()));
+  const [today, setToday] = useState<string | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToday(toISO(new Date()));
+  }, []);
+  if (!today) return <div className="h-64 animate-pulse rounded-3xl bg-muted" aria-label="Cargando diario" />;
+  return <DiaryDay today={today} />;
+}
+
+function DiaryDay({ today }: { today: string }) {
+  const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
-  const close = useCallback(() => setDialog(null), []);
+  // Abrir/cerrar un diálogo limpia cualquier error anterior.
+  const open = useCallback((d: Dialog) => {
+    setError(null);
+    setDialog(d);
+  }, []);
+  const close = useCallback(() => {
+    setError(null);
+    setDialog(null);
+  }, []);
 
   const reload = useCallback(async (d: string) => setEntries(await loadDay(createClient(), d)), []);
 
@@ -79,26 +99,29 @@ export function Diary() {
           <ChevronLeft size={26} />
         </button>
         <div className="relative flex-1 text-center">
-          <h1 className="text-2xl font-bold capitalize tracking-tight">{dayLabel(date)}</h1>
-          <p className="text-xs text-subtle">{date}</p>
+          <h1 className="text-2xl font-bold capitalize tracking-tight">{dayLabel(date, today)}</h1>
+          <p className="text-xs text-subtle">
+            {relativeLabel(date, today) ? longDate(date, true) : date.slice(0, 4)}
+          </p>
           {/* El input de fecha cubre el título: tocarlo abre el selector nativo */}
           <input type="date" aria-label="Elegir fecha" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} className="absolute inset-0 h-full w-full opacity-0" />
         </div>
         <button onClick={() => setDate(addDays(date, 1))} aria-label="Día siguiente" className="flex h-12 w-12 items-center justify-center rounded-full text-subtle active:bg-muted">
           <ChevronRight size={26} />
         </button>
-        <button onClick={() => setDialog({ kind: "menu" })} aria-label="Más opciones" className="flex h-12 w-12 items-center justify-center rounded-full text-subtle active:bg-muted">
+        <button onClick={() => open({ kind: "menu" })} aria-label="Más opciones" className="flex h-12 w-12 items-center justify-center rounded-full text-subtle active:bg-muted">
           <MoreHorizontal size={24} />
         </button>
       </header>
 
-      {date !== toISO(new Date()) && (
-        <button onClick={() => setDate(toISO(new Date()))} className="mb-4 h-10 w-full rounded-xl bg-muted text-sm font-medium text-primary">
+      {date !== today && (
+        <button onClick={() => setDate(today)} className="mb-4 h-10 w-full rounded-xl bg-muted text-sm font-medium text-primary">
           Volver a hoy
         </button>
       )}
 
-      {error && <p role="alert" className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
+      {/* Con un diálogo abierto el error se muestra dentro de él */}
+      {error && !dialog && <p role="alert" className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
 
       {/* Totales del día */}
       <div className="mb-5 grid grid-cols-4 gap-2 rounded-3xl bg-card p-4 text-center">
@@ -120,18 +143,18 @@ export function Diary() {
                 <h2 className="flex-1 font-semibold">{m.label}</h2>
                 <span className="mr-2 text-sm text-subtle">{Math.round(sum(m.items, "kcal"))} kcal</span>
                 {m.items.length > 0 && (
-                  <button onClick={() => setDialog({ kind: "copyMeal", meal: m.id })} aria-label={`Copiar ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full text-subtle active:bg-muted">
+                  <button onClick={() => open({ kind: "copyMeal", meal: m.id })} aria-label={`Copiar ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full text-subtle active:bg-muted">
                     <MoreHorizontal size={20} />
                   </button>
                 )}
-                <button onClick={() => setDialog({ kind: "add", meal: m.id, food: null })} aria-label={`Añadir a ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-fg active:scale-95">
+                <button onClick={() => open({ kind: "add", meal: m.id, food: null })} aria-label={`Añadir a ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-fg active:scale-95">
                   <Plus size={22} />
                 </button>
               </div>
               <ul className="px-2 pb-2 pt-1">
                 {m.items.map((e) => (
                   <li key={e.id}>
-                    <button onClick={() => setDialog({ kind: "edit", entry: e })} className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left active:bg-muted">
+                    <button onClick={() => open({ kind: "edit", entry: e })} className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left active:bg-muted">
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{e.name}</span>
                         <span className="block text-sm text-subtle">{e.grams} g · P {Math.round(e.protein_g)} · H {Math.round(e.carbs_g)} · G {Math.round(e.fat_g)}</span>
@@ -148,13 +171,13 @@ export function Diary() {
       )}
 
       {dialog?.kind === "menu" && (
-        <Sheet title="Opciones del día" onClose={close}>
+        <Sheet title="Opciones del día" onClose={close} error={error}>
           <Button variant="secondary" onClick={copyPreviousDay} disabled={busy}>Copiar el día anterior aquí</Button>
         </Sheet>
       )}
 
       {dialog?.kind === "add" && (
-        <Sheet title={`Añadir a ${mealLabel(dialog.meal)}`} onClose={close}>
+        <Sheet title={`Añadir a ${mealLabel(dialog.meal)}`} onClose={close} error={error}>
           {dialog.food ? (
             <>
               <button onClick={() => setDialog({ ...dialog, food: null })} className="mb-3 h-10 text-sm font-medium text-primary">← Cambiar alimento</button>
@@ -183,6 +206,7 @@ export function Diary() {
         <EditSheet
           entry={dialog.entry}
           busy={busy}
+          error={error}
           onClose={close}
           onSave={(patch) => mutate(() => updateEntry(createClient(), dialog.entry.id, patch), "No se pudo guardar el cambio.")}
           onDelete={() => mutate(() => deleteEntry(createClient(), dialog.entry.id), "No se pudo borrar la entrada.")}
@@ -194,6 +218,7 @@ export function Diary() {
           meal={dialog.meal}
           fromDate={date}
           busy={busy}
+          error={error}
           onClose={close}
           onCopy={(toDate, toMeal) =>
             mutate(async () => {
@@ -217,15 +242,15 @@ function Total({ label, value, color }: { label: string; value: number; color: s
 }
 
 // Edición de una entrada: cantidad (con macros recalculados) y comida.
-function EditSheet({ entry, busy, onClose, onSave, onDelete }: {
-  entry: Entry; busy: boolean; onClose: () => void;
+function EditSheet({ entry, busy, error, onClose, onSave, onDelete }: {
+  entry: Entry; busy: boolean; error: string | null; onClose: () => void;
   onSave: (patch: Partial<Omit<Entry, "id">>) => void; onDelete: () => void;
 }) {
   const [meal, setMeal] = useState<Meal>(entry.meal);
   // Valores por 100 g derivados de lo guardado (el cálculo es lineal).
   const per = (v: number) => (v / entry.grams) * 100;
   return (
-    <Sheet title="Editar entrada" onClose={onClose}>
+    <Sheet title="Editar entrada" onClose={onClose} error={error}>
       <div className="mb-4">
         <Field label="Comida">
           <select className={inputCls} value={meal} onChange={(e) => setMeal(e.target.value as Meal)}>
@@ -248,13 +273,13 @@ function EditSheet({ entry, busy, onClose, onSave, onDelete }: {
 }
 
 // Copia las entradas de una comida a otro día y/o comida.
-function CopyMealSheet({ meal, fromDate, busy, onClose, onCopy }: {
-  meal: Meal; fromDate: string; busy: boolean; onClose: () => void; onCopy: (date: string, meal: Meal) => void;
+function CopyMealSheet({ meal, fromDate, busy, error, onClose, onCopy }: {
+  meal: Meal; fromDate: string; busy: boolean; error: string | null; onClose: () => void; onCopy: (date: string, meal: Meal) => void;
 }) {
   const [toDate, setToDate] = useState(addDays(fromDate, 1));
   const [toMeal, setToMeal] = useState<Meal>(meal);
   return (
-    <Sheet title={`Copiar ${mealLabel(meal)}`} onClose={onClose}>
+    <Sheet title={`Copiar ${mealLabel(meal)}`} onClose={onClose} error={error}>
       <div className="flex flex-col gap-4">
         <Field label="Día destino">
           <input type="date" className={inputCls} value={toDate} onChange={(e) => setToDate(e.target.value)} />

@@ -20,11 +20,21 @@ export function addDays(iso: string, days: number): string {
   return toISO(new Date(y, m - 1, d + days, 12));
 }
 
-// "Hoy", "Ayer", "Mañana" o "lunes, 26 de octubre".
-export function dayLabel(iso: string, today = toISO(new Date())): string {
+// "Hoy", "Ayer", "Mañana" o null si no es un día relativo.
+export function relativeLabel(iso: string, today: string): string | null {
   if (iso === today) return "Hoy";
   if (iso === addDays(today, -1)) return "Ayer";
   if (iso === addDays(today, 1)) return "Mañana";
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date(y, m - 1, d));
+  return null;
 }
+
+// "lunes, 26 de octubre" (con año si se pide).
+export function longDate(iso: string, withYear = false): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-ES", {
+    weekday: "long", day: "numeric", month: "long", ...(withYear && { year: "numeric" }),
+  }).format(new Date(y, m - 1, d));
+}
+
+// Título del día: relativo si procede, si no la fecha larga.
+export const dayLabel = (iso: string, today: string) => relativeLabel(iso, today) ?? longDate(iso);

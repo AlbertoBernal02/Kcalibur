@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useEffect } from "react";
 
 // Hoja inferior modal: cierra con Escape o tocando el fondo y bloquea el scroll de la página.
-export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Sheet({ title, onClose, error, children }: { title: string; onClose: () => void; error?: string | null; children: React.ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -31,7 +31,14 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
             <X size={24} />
           </button>
         </header>
-        <div className="overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">{children}</div>
+        <div className="overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+          {error && (
+            <p role="alert" className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </p>
+          )}
+          {children}
+        </div>
       </div>
     </div>
   );

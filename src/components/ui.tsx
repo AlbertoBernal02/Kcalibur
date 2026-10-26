@@ -1,7 +1,10 @@
 // Piezas de UI compartidas (formularios con objetivos táctiles grandes).
 
-export const inputCls =
-  "h-14 w-full rounded-2xl border border-border bg-card px-4 outline-none transition focus:border-primary";
+// Estilo común sin medidas, para controles con tamaño propio (p. ej. filtros compactos).
+export const inputBase =
+  "min-w-0 rounded-2xl border border-border bg-card px-4 outline-none transition focus:border-primary";
+
+export const inputCls = `h-14 w-full ${inputBase}`;
 
 // Etiqueta + control.
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
