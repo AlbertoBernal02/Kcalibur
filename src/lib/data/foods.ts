@@ -87,6 +87,29 @@ export async function saveFood(sb: SupabaseClient, userId: string, input: FoodIn
   return data.id as string;
 }
 
+// Alimento (propio o genérico) con ese código de barras, si ya está en la base de datos.
+export async function findByBarcode(sb: SupabaseClient, code: string): Promise<Food | null> {
+  const { data, error } = await sb.from("foods").select(COLS).eq("barcode", code).limit(1).maybeSingle();
+  if (error) throw error;
+  return data as Food | null;
+}
+
+// Guarda en la caché un producto de Open Food Facts (source 'off', editable por el usuario).
+export async function insertOffFood(sb: SupabaseClient, userId: string, input: FoodInput): Promise<Food> {
+  const { data, error } = await sb
+    .from("foods")
+    .insert({ ...input, user_id: userId, source: "off" })
+    .select(COLS)
+    .single();
+  if (error) {
+    // 23505 = ya existe (carrera entre dos importaciones del mismo código): usamos el existente.
+    const existing = error.code === "23505" && input.barcode ? await findByBarcode(sb, input.barcode) : null;
+    if (existing) return existing;
+    throw error;
+  }
+  return data as Food;
+}
+
 export async function deleteFood(sb: SupabaseClient, id: string) {
   const { error } = await sb.from("foods").delete().eq("id", id);
   if (error) throw error;

@@ -30,9 +30,12 @@ const toForm = (f: Food): Form => ({
 });
 
 // Crear / ver / editar un alimento. Los genéricos son de solo lectura (se pueden duplicar).
-export function FoodEditor({ id }: { id?: string }) {
+export type Prefill = Partial<Pick<Form, "name" | "brand" | "barcode" | "kcal" | "protein" | "carbs" | "fat" | "serving">>;
+
+// `prefill` rellena un alimento nuevo (p. ej. un producto de Open Food Facts con datos incompletos).
+export function FoodEditor({ id, prefill }: { id?: string; prefill?: Prefill }) {
   const router = useRouter();
-  const [f, setF] = useState<Form>(EMPTY);
+  const [f, setF] = useState<Form>({ ...EMPTY, ...prefill });
   const [food, setFood] = useState<Food | null>(null);
   const [loading, setLoading] = useState(!!id);
   const [busy, setBusy] = useState(false);
@@ -137,6 +140,16 @@ export function FoodEditor({ id }: { id?: string }) {
           {readOnly && (
             <p className="rounded-xl bg-muted px-4 py-3 text-sm text-subtle">
               Es un alimento genérico y no se puede editar. Puedes duplicarlo para crear tu propia versión.
+            </p>
+          )}
+          {food?.source === "off" && (
+            <p className="rounded-xl bg-muted px-4 py-3 text-sm text-subtle">
+              Importado de Open Food Facts (datos colaborativos, ODbL). Si algo no cuadra con la etiqueta, corrígelo aquí.
+            </p>
+          )}
+          {!id && prefill?.barcode && (
+            <p className="rounded-xl bg-carbs/10 px-4 py-3 text-sm text-carbs">
+              Open Food Facts no tiene todos los datos de este producto. Completa los valores que faltan (mira la etiqueta).
             </p>
           )}
           <Field label="Nombre">

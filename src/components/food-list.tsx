@@ -2,9 +2,11 @@
 
 import { Plus, Search, Star } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES, foodLabel, listFoods, normalize, setFavorite, type Category, type Food } from "@/lib/data/foods";
 import { createClient } from "@/lib/supabase/client";
+import { OffSearch } from "@/components/off-search";
 import { inputBase } from "@/components/ui";
 
 type Tab = "all" | "fav" | "recent" | "mine";
@@ -24,6 +26,7 @@ const EMPTY_TEXT: Record<Tab, string> = {
 
 // Listado de alimentos con búsqueda, pestañas, filtro por categoría y favoritos.
 export function FoodList() {
+  const router = useRouter();
   const [foods, setFoods] = useState<Food[]>([]);
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [lastUsed, setLastUsed] = useState<Map<string, string>>(new Map());
@@ -135,14 +138,17 @@ export function FoodList() {
       ) : visible.length === 0 ? (
         <p className="mt-10 text-center text-subtle">{EMPTY_TEXT[tab]}</p>
       ) : (
-        // pb-20: deja libre el último alimento bajo el botón flotante.
-        <ul className="flex flex-col gap-2 pb-20">
+        <ul className="flex flex-col gap-2">
           {visible.map((f) => (
             <li key={f.id} className="flex items-center rounded-2xl bg-card">
               <Link href={`/alimentos/${f.id}`} className="min-w-0 flex-1 px-4 py-3">
                 <p className="flex items-center gap-2 font-medium">
                   <span className="truncate">{foodLabel(f)}</span>
-                  {f.user_id && <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">Propio</span>}
+                  {f.user_id && (
+                    <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+                      {f.source === "off" ? "OFF" : "Propio"}
+                    </span>
+                  )}
                 </p>
                 <p className="truncate text-sm text-subtle">
                   {f.brand ? `${f.brand} · ` : ""}
@@ -161,6 +167,12 @@ export function FoodList() {
             </li>
           ))}
         </ul>
+      )}
+
+      {!loading && (
+        <div className="pb-20">
+          <OffSearch key={q.trim()} query={q} onFood={(f) => router.push(`/alimentos/${f.id}`)} />
+        </div>
       )}
 
       <Link

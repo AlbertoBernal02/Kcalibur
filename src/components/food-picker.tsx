@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { foodLabel, listFoods, normalize, type Food } from "@/lib/data/foods";
 import { createClient } from "@/lib/supabase/client";
+import { OffSearch } from "@/components/off-search";
 import { inputCls } from "@/components/ui";
 
 type Tab = "recent" | "fav" | "all";
@@ -97,6 +98,8 @@ export function FoodPicker({ onPick }: { onPick: (food: Food) => void }) {
           ))}
         </ul>
       )}
+
+      {!loading && <OffSearch key={q.trim()} query={q} onFood={onPick} />}
     </div>
   );
 }
