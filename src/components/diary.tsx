@@ -4,8 +4,11 @@ import { ChevronLeft, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addEntry, copyEntries, deleteEntry, loadDay, updateEntry, type Entry } from "@/lib/data/diary";
 import { foodLabel, type Food } from "@/lib/data/foods";
+import { loadGoals } from "@/lib/data/profile";
+import type { Goals } from "@/lib/nutrition";
 import { MEALS, addDays, dayLabel, longDate, relativeLabel, toISO, type Meal } from "@/lib/meals";
 import { createClient, currentUserId } from "@/lib/supabase/client";
+import { DaySummary } from "@/components/day-summary";
 import { FoodPicker } from "@/components/food-picker";
 import { QuantityForm } from "@/components/quantity-form";
 import { Sheet } from "@/components/sheet";
@@ -35,6 +38,7 @@ export function Diary() {
 function DiaryDay({ today }: { today: string }) {
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +54,11 @@ function DiaryDay({ today }: { today: string }) {
   }, []);
 
   const reload = useCallback(async (d: string) => setEntries(await loadDay(createClient(), d)), []);
+
+  // Objetivos diarios: se cargan una vez (si falla, el resumen muestra solo totales).
+  useEffect(() => {
+    loadGoals(createClient()).then(setGoals).catch(() => setGoals(null));
+  }, []);
 
   // Carga el día; `stale` evita pisar el resultado si se cambia de día rápido.
   useEffect(() => {
@@ -123,13 +132,8 @@ function DiaryDay({ today }: { today: string }) {
       {/* Con un diálogo abierto el error se muestra dentro de él */}
       {error && !dialog && <p role="alert" className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
 
-      {/* Totales del día */}
-      <div className="mb-5 grid grid-cols-4 gap-2 rounded-3xl bg-card p-4 text-center">
-        <Total label="kcal" value={sum(entries, "kcal")} color="text-foreground" />
-        <Total label="Prot." value={sum(entries, "protein_g")} color="text-protein" />
-        <Total label="Hidr." value={sum(entries, "carbs_g")} color="text-carbs" />
-        <Total label="Grasa" value={sum(entries, "fat_g")} color="text-fat" />
-      </div>
+      {/* Resumen del día frente a los objetivos */}
+      {loading ? <div className="mb-5 h-44 animate-pulse rounded-3xl bg-muted" /> : <DaySummary entries={entries} goals={goals} />}
 
       {loading ? (
         <div className="flex flex-col gap-3" aria-label="Cargando diario">
@@ -229,15 +233,6 @@ function DiaryDay({ today }: { today: string }) {
         />
       )}
     </>
-  );
-}
-
-function Total({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div>
-      <p className={`text-xl font-bold ${color}`}>{Math.round(value)}</p>
-      <p className="text-xs text-subtle">{label}</p>
-    </div>
   );
 }
 

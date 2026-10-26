@@ -8,6 +8,15 @@ export const MEALS: { id: Meal; label: string }[] = [
   { id: "extras", label: "Snacks" },
 ];
 
+// Color de cada comida en el desglose (tonos medios: legibles en claro y oscuro).
+export const MEAL_COLOR: Record<Meal, string> = {
+  breakfast: "#f59e0b",
+  lunch: "#22c55e",
+  snack: "#a855f7",
+  dinner: "#3b82f6",
+  extras: "#ec4899",
+};
+
 // Fecha local como "YYYY-MM-DD" (toISOString usaría UTC y desfasaría el día).
 export function toISO(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");

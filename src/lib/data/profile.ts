@@ -24,6 +24,13 @@ export async function loadProfile(sb: SupabaseClient): Promise<{ profile: Profil
   return { profile: p.data as Profile | null, goals: g.data as Goals | null };
 }
 
+// Solo los objetivos diarios (null si el usuario aún no los ha definido).
+export async function loadGoals(sb: SupabaseClient): Promise<Goals | null> {
+  const { data, error } = await sb.from("goals").select("kcal, protein_g, carbs_g, fat_g").maybeSingle();
+  if (error) throw error;
+  return data as Goals | null;
+}
+
 // Guarda perfil (update: la fila la crea el trigger) y, si se indican, los objetivos (upsert).
 export async function saveProfile(sb: SupabaseClient, userId: string, profile: Profile, goals: Goals | null) {
   const p = await sb.from("profiles").update(profile).eq("id", userId);
