@@ -1,5 +1,5 @@
-import { PageHeader } from "@/components/page-header";
+import { Diary } from "@/components/diary";
 
 export default function DiarioPage() {
-  return <PageHeader title="Diario" subtitle="Tus comidas de hoy aparecerán aquí." />;
+  return <Diary />;
 }

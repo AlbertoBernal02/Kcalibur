@@ -7,3 +7,10 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 }
+
+// Id del usuario leído de la sesión local (sin llamada de red, válido offline).
+export async function currentUserId(): Promise<string> {
+  const { data } = await createClient().auth.getSession();
+  if (!data.session) throw new Error("sin sesión");
+  return data.session.user.id;
+}

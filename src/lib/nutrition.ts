@@ -46,5 +46,14 @@ export function suggestGoals(tdeeKcal: number, weightKg: number, goal: Goal): Go
   return { kcal, protein_g, carbs_g, fat_g };
 }
 
+// Valores por 100 g de un alimento.
+export type Per100 = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+
+// Macros de una cantidad en gramos (redondeo a 1 decimal).
+export function scaleMacros(per100: Per100, grams: number): Per100 {
+  const r = (v: number) => Math.round(((v * grams) / 100) * 10) / 10;
+  return { kcal: r(per100.kcal), protein_g: r(per100.protein_g), carbs_g: r(per100.carbs_g), fat_g: r(per100.fat_g) };
+}
+
 // Calorías que aportan unos macros (4/4/9 kcal por gramo).
 export const kcalFromMacros = (g: Goals) => g.protein_g * 4 + g.carbs_g * 4 + g.fat_g * 9;

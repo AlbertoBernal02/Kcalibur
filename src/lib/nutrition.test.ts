@@ -1,7 +1,13 @@
 // Ejecutar: npm test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ageFromBirth, bmr, kcalFromMacros, suggestGoals, tdee } from "./nutrition.ts";
+import { ageFromBirth, bmr, kcalFromMacros, scaleMacros, suggestGoals, tdee } from "./nutrition.ts";
+
+test("scaleMacros: 150 g de arroz cocido (130/2.7/28/0.3 por 100 g)", () => {
+  assert.deepEqual(scaleMacros({ kcal: 130, protein_g: 2.7, carbs_g: 28, fat_g: 0.3 }, 150), {
+    kcal: 195, protein_g: 4.1, carbs_g: 42, fat_g: 0.5,
+  });
+});
 
 test("BMR Mifflin-St Jeor (hombre 30a, 80kg, 180cm)", () => {
   assert.equal(bmr("male", 80, 180, 30), 1780);
