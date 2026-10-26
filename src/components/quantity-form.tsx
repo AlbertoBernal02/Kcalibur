@@ -9,6 +9,7 @@ type Props = {
   per100: Per100;
   servingG: number | null;
   initialGrams?: number;
+  initialUnit?: "g" | "serving"; // "serving" empieza en 1 ración (recetas)
   submitLabel: string;
   onSubmit: (grams: number, servingG: number | null, macros: Per100) => void;
   busy?: boolean;
@@ -16,9 +17,12 @@ type Props = {
 };
 
 // Cantidad por gramos o raciones con macros calculados en vivo.
-export function QuantityForm({ name, per100, servingG, initialGrams, submitLabel, onSubmit, busy, onDelete }: Props) {
-  const [unit, setUnit] = useState<"g" | "serving">("g");
-  const [amount, setAmount] = useState(initialGrams ? String(initialGrams) : servingG ? String(servingG) : "100");
+export function QuantityForm({ name, per100, servingG, initialGrams, initialUnit, submitLabel, onSubmit, busy, onDelete }: Props) {
+  const startInServings = initialUnit === "serving" && !!servingG;
+  const [unit, setUnit] = useState<"g" | "serving">(startInServings ? "serving" : "g");
+  const [amount, setAmount] = useState(
+    startInServings ? "1" : initialGrams ? String(initialGrams) : servingG ? String(servingG) : "100",
+  );
 
   const value = Number(amount.replace(",", "."));
   const grams = unit === "g" ? value : value * (servingG ?? 0);

@@ -2,20 +2,20 @@
 
 import { ChevronLeft, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { addEntry, copyEntries, deleteEntry, loadDay, updateEntry, type Entry } from "@/lib/data/diary";
-import { foodLabel, type Food } from "@/lib/data/foods";
+import { copyEntries, deleteEntry, loadDay, updateEntry, type Entry } from "@/lib/data/diary";
 import { loadGoals } from "@/lib/data/profile";
+import { createSavedMeal, entriesToItems } from "@/lib/data/saved-meals";
 import type { Goals } from "@/lib/nutrition";
 import { MEALS, addDays, dayLabel, longDate, relativeLabel, toISO, type Meal } from "@/lib/meals";
 import { createClient, currentUserId } from "@/lib/supabase/client";
+import { AddToMealSheet } from "@/components/add-to-meal-sheet";
 import { DaySummary } from "@/components/day-summary";
-import { FoodPicker } from "@/components/food-picker";
 import { QuantityForm } from "@/components/quantity-form";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, inputCls } from "@/components/ui";
 
 type Dialog =
-  | { kind: "add"; meal: Meal; food: Food | null }
+  | { kind: "add"; meal: Meal }
   | { kind: "edit"; entry: Entry }
   | { kind: "copyMeal"; meal: Meal }
   | { kind: "menu" };
@@ -41,6 +41,7 @@ function DiaryDay({ today }: { today: string }) {
   const [goals, setGoals] = useState<Goals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   // Abrir/cerrar un diálogo limpia cualquier error anterior.
@@ -76,13 +77,18 @@ function DiaryDay({ today }: { today: string }) {
   }, [date]);
 
   // Ejecuta una escritura, recarga el día y cierra el diálogo; muestra el error si falla.
-  async function mutate(action: () => Promise<void>, failText: string) {
+  // `okText` muestra un aviso breve de confirmación al terminar.
+  async function mutate(action: () => Promise<void>, failText: string, okText?: string) {
     setBusy(true);
     setError(null);
     try {
       await action();
       await reload(date);
       setDialog(null);
+      if (okText) {
+        setNotice(okText);
+        setTimeout(() => setNotice(null), 3500);
+      }
     } catch {
       setError(failText);
     } finally {
@@ -129,6 +135,8 @@ function DiaryDay({ today }: { today: string }) {
         </button>
       )}
 
+      {notice && <p role="status" className="mb-4 rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">{notice}</p>}
+
       {/* Con un diálogo abierto el error se muestra dentro de él */}
       {error && !dialog && <p role="alert" className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
 
@@ -147,11 +155,11 @@ function DiaryDay({ today }: { today: string }) {
                 <h2 className="flex-1 font-semibold">{m.label}</h2>
                 <span className="mr-2 text-sm text-subtle">{Math.round(sum(m.items, "kcal"))} kcal</span>
                 {m.items.length > 0 && (
-                  <button onClick={() => open({ kind: "copyMeal", meal: m.id })} aria-label={`Copiar ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full text-subtle active:bg-muted">
+                  <button onClick={() => open({ kind: "copyMeal", meal: m.id })} aria-label={`Opciones de ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full text-subtle active:bg-muted">
                     <MoreHorizontal size={20} />
                   </button>
                 )}
-                <button onClick={() => open({ kind: "add", meal: m.id, food: null })} aria-label={`Añadir a ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-fg active:scale-95">
+                <button onClick={() => open({ kind: "add", meal: m.id })} aria-label={`Añadir a ${m.label}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-fg active:scale-95">
                   <Plus size={22} />
                 </button>
               </div>
@@ -181,29 +189,7 @@ function DiaryDay({ today }: { today: string }) {
       )}
 
       {dialog?.kind === "add" && (
-        <Sheet title={`Añadir a ${mealLabel(dialog.meal)}`} onClose={close} error={error}>
-          {dialog.food ? (
-            <>
-              <button onClick={() => setDialog({ ...dialog, food: null })} className="mb-3 h-10 text-sm font-medium text-primary">← Cambiar alimento</button>
-              <QuantityForm
-                name={foodLabel(dialog.food)}
-                per100={{ kcal: dialog.food.kcal_100g, protein_g: dialog.food.protein_100g, carbs_g: dialog.food.carbs_100g, fat_g: dialog.food.fat_100g }}
-                servingG={dialog.food.serving_g}
-                submitLabel="Añadir"
-                busy={busy}
-                onSubmit={(grams, servingG, m) => {
-                  const food = dialog.food!;
-                  mutate(async () => addEntry(createClient(), await currentUserId(), {
-                    entry_date: date, meal: dialog.meal, food_id: food.id, name: foodLabel(food),
-                    grams, serving_g: servingG, ...m,
-                  }), "No se pudo añadir la entrada.");
-                }}
-              />
-            </>
-          ) : (
-            <FoodPicker onPick={(food) => setDialog({ ...dialog, food })} />
-          )}
-        </Sheet>
+        <AddToMealSheet meal={dialog.meal} date={date} busy={busy} error={error} onClose={close} onWrite={mutate} />
       )}
 
       {dialog?.kind === "edit" && (
@@ -229,6 +215,16 @@ function DiaryDay({ today }: { today: string }) {
               const items = entries.filter((e) => e.meal === dialog.meal);
               await copyEntries(createClient(), await currentUserId(), items, toDate, toMeal);
             }, "No se pudo copiar la comida.")
+          }
+          onSaveAsMeal={(name) =>
+            mutate(
+              async () => {
+                const items = entriesToItems(entries.filter((e) => e.meal === dialog.meal));
+                await createSavedMeal(createClient(), await currentUserId(), { name, kind: "meal", servings: 1, items });
+              },
+              "No se pudo guardar la comida.",
+              `«${name}» guardada en Comidas ✓`,
+            )
           }
         />
       )}
@@ -267,15 +263,18 @@ function EditSheet({ entry, busy, error, onClose, onSave, onDelete }: {
   );
 }
 
-// Copia las entradas de una comida a otro día y/o comida.
-function CopyMealSheet({ meal, fromDate, busy, error, onClose, onCopy }: {
-  meal: Meal; fromDate: string; busy: boolean; error: string | null; onClose: () => void; onCopy: (date: string, meal: Meal) => void;
+// Opciones de una comida: copiarla a otro día/comida o guardarla como comida reutilizable.
+function CopyMealSheet({ meal, fromDate, busy, error, onClose, onCopy, onSaveAsMeal }: {
+  meal: Meal; fromDate: string; busy: boolean; error: string | null; onClose: () => void;
+  onCopy: (date: string, meal: Meal) => void; onSaveAsMeal: (name: string) => void;
 }) {
   const [toDate, setToDate] = useState(addDays(fromDate, 1));
   const [toMeal, setToMeal] = useState<Meal>(meal);
+  const [name, setName] = useState(mealLabel(meal));
   return (
-    <Sheet title={`Copiar ${mealLabel(meal)}`} onClose={onClose} error={error}>
+    <Sheet title={`Opciones de ${mealLabel(meal)}`} onClose={onClose} error={error}>
       <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-subtle">Copiar a otro día</h3>
         <Field label="Día destino">
           <input type="date" className={inputCls} value={toDate} onChange={(e) => setToDate(e.target.value)} />
         </Field>
@@ -285,6 +284,12 @@ function CopyMealSheet({ meal, fromDate, busy, error, onClose, onCopy }: {
           </select>
         </Field>
         <Button onClick={() => toDate && onCopy(toDate, toMeal)} disabled={busy || !toDate}>{busy ? "Copiando…" : "Copiar"}</Button>
+
+        <h3 className="mt-2 border-t border-border pt-4 text-sm font-semibold text-subtle">Guardar como comida</h3>
+        <Field label="Nombre">
+          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+        </Field>
+        <Button variant="secondary" onClick={() => onSaveAsMeal(name.trim())} disabled={busy || !name.trim()}>Guardar como comida</Button>
       </div>
     </Sheet>
   );

@@ -1,12 +1,13 @@
 "use client";
 
-import { BookOpen, Apple, LineChart, User, type LucideIcon } from "lucide-react";
+import { BookOpen, Apple, ChefHat, LineChart, User, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/", label: "Diario", Icon: BookOpen },
   { href: "/alimentos", label: "Alimentos", Icon: Apple },
+  { href: "/comidas", label: "Comidas", Icon: ChefHat },
   { href: "/progreso", label: "Progreso", Icon: LineChart },
   { href: "/perfil", label: "Perfil", Icon: User },
 ];
