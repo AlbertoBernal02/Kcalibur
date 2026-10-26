@@ -4,22 +4,27 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f6f7f4;
-  --foreground: #14201a;
-  --card: #ffffff;
-  --muted: #e9ece6;
-  --subtle: #5d6b63;
-  --border: #dde2da;
-  --primary: #16a34a;
+  /* Tema claro: verde salvia (nada de blanco puro) */
+  --background: #e4ede2;
+  --hero: #c3e0c8; /* tono del degradado superior */
+  --foreground: #10201a;
+  --card: #f4f9f2;
+  --muted: #d3e1d1;
+  --subtle: #46604f;
+  --border: #bfd2bf;
+  --primary: #15803d;
   --primary-fg: #ffffff;
-  --protein: #3b82f6;
-  --carbs: #f59e0b;
-  --fat: #ec4899;
+  --protein: #2563eb;
+  --carbs: #d97706;
+  --fat: #db2777;
   --danger: #dc2626;
+  --shadow-card: 0 1px 2px rgba(16, 32, 26, 0.07), 0 4px 14px rgba(16, 32, 26, 0.05);
 }
 
 .dark {
   --background: #0c1210;
+  --hero: #12301f;
+  --shadow-card: none;
   --foreground: #eaf1ec;
   --card: #151d19;
   --muted: #1f2a25;
@@ -58,11 +63,17 @@ html.dark {
 }
 
 body {
-  background: var(--background);
+  /* Degradado suave arriba para dar profundidad; el resto es el color de fondo */
+  background: linear-gradient(180deg, var(--hero) 0, var(--background) 340px) no-repeat, var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   /* Evita el rebote raro en iOS standalone */
   overscroll-behavior-y: none;
+}
+
+/* Las tarjetas flotan ligeramente sobre el fondo (solo en claro; en oscuro no hay sombra). */
+.bg-card {
+  box-shadow: var(--shadow-card);
 }
 
 /* Anillo de foco visible al navegar con teclado (no al tocar). */

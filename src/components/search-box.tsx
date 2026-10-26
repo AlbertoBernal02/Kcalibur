@@ -19,7 +19,7 @@ export function SearchBox({ value, onChange, onScan, height = "h-14" }: {
       <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-subtle" size={20} />
       <input
         type="search"
-        placeholder="Buscar alimento o código…"
+        placeholder="Buscar alimento…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`${inputBase} ${height} w-full pl-12 pr-14`}
