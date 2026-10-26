@@ -168,9 +168,9 @@ export function DietView({ id }: { id: string }) {
                     >
                       {selected ? <CircleCheck size={22} className="shrink-0 text-primary" /> : <Circle size={22} className="shrink-0 text-subtle" />}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{o.name}</span>
-                        <span className="block truncate text-sm text-subtle">
-                          {o.items.map((i) => i.name).join(", ") || "Sin alimentos"}
+                        <span className="block break-words font-medium">{o.name}</span>
+                        <span className="line-clamp-3 break-words text-sm text-subtle">
+                          {o.items.map((i) => `${i.name} (${i.grams} g)`).join(" · ") || "Sin alimentos"}
                         </span>
                         <span className="block text-sm text-subtle">
                           {nf(t.kcal)} kcal · P {nf(t.protein_g)} · H {nf(t.carbs_g)} · G {nf(t.fat_g)}

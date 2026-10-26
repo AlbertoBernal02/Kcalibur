@@ -45,3 +45,6 @@ next-env.d.ts
 
 # plantilla de variables (sin secretos): sí se versiona
 !.env.example
+
+# datos personales de salud: no se suben
+PLAN-NUTRICIONAL*.docx
