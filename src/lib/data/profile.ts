@@ -9,9 +9,10 @@ export type Profile = {
   weight_kg: number | null;
   activity: Activity | null;
   goal: Goal | null;
+  water_goal_ml: number;
 };
 
-const PROFILE_COLS = "display_name, sex, birth_date, height_cm, weight_kg, activity, goal";
+const PROFILE_COLS = "display_name, sex, birth_date, height_cm, weight_kg, activity, goal, water_goal_ml";
 
 // Perfil y objetivos del usuario actual (RLS limita a su propia fila).
 export async function loadProfile(sb: SupabaseClient): Promise<{ profile: Profile | null; goals: Goals | null }> {

@@ -29,11 +29,12 @@ type Form = {
   protein: string;
   carbs: string;
   fat: string;
+  water: string;
 };
 
 const EMPTY: Form = {
   name: "", sex: "", birth: "", height: "", weight: "", activity: "", goal: "",
-  kcal: "", protein: "", carbs: "", fat: "",
+  kcal: "", protein: "", carbs: "", fat: "", water: "2000",
 };
 
 const num = (s: string) => (s.trim() === "" ? NaN : Number(s.replace(",", ".")));
@@ -62,6 +63,7 @@ export function ProfileForm() {
           protein: g?.protein_g.toString() ?? "",
           carbs: g?.carbs_g.toString() ?? "",
           fat: g?.fat_g.toString() ?? "",
+          water: String(p?.water_goal_ml ?? 2000),
         }),
       )
       .catch(() => setMsg({ ok: false, text: "No se pudo cargar tu perfil. Revisa la conexión." }))
@@ -92,6 +94,9 @@ export function ProfileForm() {
     const h = num(f.height), w = num(f.weight);
     if (f.height && !(h >= 100 && h <= 250)) return setMsg({ ok: false, text: "La altura debe estar entre 100 y 250 cm." });
     if (f.weight && !(w >= 30 && w <= 300)) return setMsg({ ok: false, text: "El peso debe estar entre 30 y 300 kg." });
+    const water = num(f.water);
+    if (!(water >= 500 && water <= 10000)) return setMsg({ ok: false, text: "El objetivo de agua debe estar entre 500 y 10000 ml." });
+
     // Objetivos: todo vacío = no se tocan; si se rellena alguno, deben estar los cuatro.
     const g = goalsNum;
     const values = [g.kcal, g.protein_g, g.carbs_g, g.fat_g];
@@ -115,6 +120,7 @@ export function ProfileForm() {
           weight_kg: f.weight ? w : null,
           activity: f.activity || null,
           goal: f.goal || null,
+          water_goal_ml: Math.round(water),
         },
         anyGoal
           ? { kcal: Math.round(g.kcal), protein_g: Math.round(g.protein_g), carbs_g: Math.round(g.carbs_g), fat_g: Math.round(g.fat_g) }
@@ -206,6 +212,9 @@ export function ProfileForm() {
         {macroKcal !== null && (
           <p className="text-sm text-subtle">Tus macros suman {macroKcal} kcal.</p>
         )}
+        <Field label="Agua (ml al día)">
+          <input className={inputCls} inputMode="numeric" value={f.water} onChange={set("water")} />
+        </Field>
       </Section>
 
       {msg && (
