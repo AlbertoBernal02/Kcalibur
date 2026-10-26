@@ -1,12 +1,13 @@
 "use client";
 
-import { Plus, Search, Star } from "lucide-react";
+import { Plus, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES, foodLabel, listFoods, normalize, setFavorite, type Category, type Food } from "@/lib/data/foods";
 import { createClient } from "@/lib/supabase/client";
 import { OffSearch } from "@/components/off-search";
+import { SearchBox } from "@/components/search-box";
 import { inputBase } from "@/components/ui";
 
 type Tab = "all" | "fav" | "recent" | "mine";
@@ -33,6 +34,7 @@ export function FoodList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [auto, setAuto] = useState(false); // true = el texto viene de un código escaneado
   const [tab, setTab] = useState<Tab>("all");
   const [cat, setCat] = useState<Category | "">("");
 
@@ -53,7 +55,7 @@ export function FoodList() {
     let list = foods.filter(
       (f) =>
         (!cat || f.category === cat) &&
-        (!nq || normalize(`${foodLabel(f)} ${f.brand ?? ""}`).includes(nq)) &&
+        (!nq || normalize(`${foodLabel(f)} ${f.brand ?? ""} ${f.barcode ?? ""}`).includes(nq)) &&
         (tab === "all" ||
           (tab === "fav" && favs.has(f.id)) ||
           (tab === "recent" && lastUsed.has(f.id)) ||
@@ -88,16 +90,18 @@ export function FoodList() {
     <>
       <div className="sticky top-0 z-10 -mx-4 bg-background/95 px-4 pb-3 pt-1 backdrop-blur">
         <div className="flex gap-2">
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-subtle" size={20} />
-            <input
-              type="search"
-              placeholder="Buscar alimento…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className={`${inputBase} h-12 w-full pl-12`}
-            />
-          </div>
+          <SearchBox
+            value={q}
+            height="h-12"
+            onChange={(v) => {
+              setAuto(false);
+              setQ(v);
+            }}
+            onScan={(code) => {
+              setAuto(true);
+              setQ(code);
+            }}
+          />
           <select
             aria-label="Categoría"
             value={cat}
@@ -171,7 +175,7 @@ export function FoodList() {
 
       {!loading && (
         <div className="pb-20">
-          <OffSearch key={q.trim()} query={q} onFood={(f) => router.push(`/alimentos/${f.id}`)} />
+          <OffSearch key={q.trim()} query={q} autoRun={auto} onFood={(f) => router.push(`/alimentos/${f.id}`)} />
         </div>
       )}
 

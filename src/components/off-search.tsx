@@ -2,7 +2,7 @@
 
 import { Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Food } from "@/lib/data/foods";
 import { importOffProduct, prefillHref, resolveBarcode, searchOff } from "@/lib/data/off-foods";
 import { isComplete, type OffProduct } from "@/lib/off";
@@ -18,7 +18,8 @@ type State =
 
 // Búsqueda en Open Food Facts por nombre o por código de barras (si el texto son 8-14 dígitos).
 // Es explícita (botón) para respetar los límites de la API. Montar con key={query} para reiniciar.
-export function OffSearch({ query, onFood }: { query: string; onFood: (food: Food) => void }) {
+// `autoRun` lanza la búsqueda al montar (código recién escaneado).
+export function OffSearch({ query, onFood, autoRun }: { query: string; onFood: (food: Food) => void; autoRun?: boolean }) {
   const router = useRouter();
   const [state, setState] = useState<State>({ s: "idle" });
   const [busyCode, setBusyCode] = useState<string | null>(null);
@@ -52,6 +53,16 @@ export function OffSearch({ query, onFood }: { query: string; onFood: (food: Foo
       setState({ s: "error", msg: "Open Food Facts no responde ahora. Prueba de nuevo en un momento." });
     }
   }
+
+  // Búsqueda automática única al montar (el componente se remonta con cada cambio de texto).
+  const started = useRef(false);
+  useEffect(() => {
+    if (autoRun && code && !started.current) {
+      started.current = true;
+      run();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (q.length < 2) return null;
 

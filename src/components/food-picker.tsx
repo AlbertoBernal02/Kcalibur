@@ -1,11 +1,10 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { foodLabel, listFoods, normalize, type Food } from "@/lib/data/foods";
 import { createClient } from "@/lib/supabase/client";
 import { OffSearch } from "@/components/off-search";
-import { inputCls } from "@/components/ui";
+import { SearchBox } from "@/components/search-box";
 
 type Tab = "recent" | "fav" | "all";
 const TABS: { id: Tab; label: string }[] = [
@@ -22,6 +21,7 @@ export function FoodPicker({ onPick }: { onPick: (food: Food) => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [q, setQ] = useState("");
+  const [auto, setAuto] = useState(false); // true = el texto viene de un código escaneado
   const [tab, setTab] = useState<Tab>("recent");
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export function FoodPicker({ onPick }: { onPick: (food: Food) => void }) {
     // Buscar ignora la pestaña: se busca en todo el catálogo.
     const list = foods.filter(
       (f) =>
-        (nq ? normalize(`${foodLabel(f)} ${f.brand ?? ""}`).includes(nq) : true) &&
+        (nq ? normalize(`${foodLabel(f)} ${f.brand ?? ""} ${f.barcode ?? ""}`).includes(nq) : true) &&
         (nq || tab === "all" || (tab === "fav" ? favs.has(f.id) : lastUsed.has(f.id))),
     );
     return !nq && tab === "recent" ? list.sort((a, b) => lastUsed.get(b.id)!.localeCompare(lastUsed.get(a.id)!)) : list;
@@ -50,9 +50,18 @@ export function FoodPicker({ onPick }: { onPick: (food: Food) => void }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-subtle" size={20} />
-        <input type="search" placeholder="Buscar alimento…" value={q} onChange={(e) => setQ(e.target.value)} className={`${inputCls} pl-12`} />
+      <div className="flex">
+        <SearchBox
+          value={q}
+          onChange={(v) => {
+            setAuto(false);
+            setQ(v);
+          }}
+          onScan={(code) => {
+            setAuto(true);
+            setQ(code);
+          }}
+        />
       </div>
       <div className="flex rounded-2xl bg-muted p-1" role="tablist">
         {TABS.map((t) => (
@@ -99,7 +108,7 @@ export function FoodPicker({ onPick }: { onPick: (food: Food) => void }) {
         </ul>
       )}
 
-      {!loading && <OffSearch key={q.trim()} query={q} onFood={onPick} />}
+      {!loading && <OffSearch key={q.trim()} query={q} autoRun={auto} onFood={onPick} />}
     </div>
   );
 }
