@@ -4,11 +4,13 @@ import { ChevronLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { foodLabel, type Food } from "@/lib/data/foods";
+import { findAoveSpray, foodLabel, type Food } from "@/lib/data/foods";
 import { createSavedMeal, deleteSavedMeal, getSavedMeal, updateSavedMeal, type Kind, type SavedItem } from "@/lib/data/saved-meals";
 import { MEALS, type Meal } from "@/lib/meals";
 import { mealTotals, perServing } from "@/lib/recipes";
+import { aoveItem, needsAove, servingNamesFor } from "@/lib/serving";
 import { currentUserId, createClient } from "@/lib/supabase/client";
+import { AoveToggle } from "@/components/aove-toggle";
 import { FoodPicker } from "@/components/food-picker";
 import { DishForm } from "@/components/outside-meal";
 import { QuantityForm } from "@/components/quantity-form";
@@ -28,6 +30,7 @@ export function SavedMealEditor({ id, dietId, dietMeal }: { id?: string; dietId?
   const [kind, setKind] = useState<Kind>("meal");
   const [servings, setServings] = useState("1");
   const [items, setItems] = useState<SavedItem[]>([]);
+  const [aoveOff, setAoveOff] = useState(false); // desmarcada la casilla del AOVE para el alimento que se está añadiendo
   const [loading, setLoading] = useState(!!id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,14 +167,29 @@ export function SavedMealEditor({ id, dietId, dietMeal }: { id?: string; dietId?
         <Sheet title="Añadir alimento" onClose={close}>
           {dialog.food ? (
             <>
-              <button onClick={() => setDialog({ kind: "add", food: null })} className="mb-3 h-10 text-sm font-medium text-primary">← Cambiar alimento</button>
+              <button onClick={() => { setAoveOff(false); setDialog({ kind: "add", food: null }); }} className="mb-3 h-10 text-sm font-medium text-primary">← Cambiar alimento</button>
+              {needsAove(dialog.food) && <AoveToggle checked={!aoveOff} onChange={(on) => setAoveOff(!on)} />}
               <QuantityForm
                 name={foodLabel(dialog.food)}
                 per100={{ kcal: dialog.food.kcal_100g, protein_g: dialog.food.protein_100g, carbs_g: dialog.food.carbs_100g, fat_g: dialog.food.fat_100g }}
                 servingG={dialog.food.serving_g}
+                initialUnit={servingNamesFor(dialog.food) ? "serving" : undefined}
+                servingNames={servingNamesFor(dialog.food)}
                 submitLabel="Añadir"
-                onSubmit={(grams, servingG, m) => {
-                  setItems((p) => [...p, { food_id: dialog.food!.id, name: foodLabel(dialog.food!), grams, serving_g: servingG, ...m }]);
+                onSubmit={async (grams, servingG, m) => {
+                  const food = dialog.food!;
+                  const added: SavedItem[] = [{ food_id: food.id, name: foodLabel(food), grams, serving_g: servingG, ...m }];
+                  // Carne o pescado con la casilla marcada: se añade también el AOVE de la sartén.
+                  if (needsAove(food) && !aoveOff) {
+                    try {
+                      const aove = await findAoveSpray(createClient());
+                      if (aove) added.push(aoveItem(aove));
+                    } catch {
+                      /* sin red: se añade el alimento solo; el AOVE se puede añadir a mano */
+                    }
+                  }
+                  setItems((p) => [...p, ...added]);
+                  setAoveOff(false);
                   close();
                 }}
               />

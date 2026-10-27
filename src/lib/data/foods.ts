@@ -125,3 +125,10 @@ export async function setFavorite(sb: SupabaseClient, userId: string, foodId: st
     : await sb.from("food_favorites").delete().eq("food_id", foodId);
   if (error) throw error;
 }
+
+// "AOVE en spray" del catálogo genérico (la ración es 1 puff = 0,25 g); null si no existe.
+export async function findAoveSpray(sb: SupabaseClient): Promise<Food | null> {
+  const { data, error } = await sb.from("foods").select(COLS).eq("name", "AOVE en spray").is("user_id", null).limit(1).maybeSingle();
+  if (error) throw error;
+  return data as Food | null;
+}

@@ -8,6 +8,7 @@ import { loadGoals } from "@/lib/data/profile";
 import { createSavedMeal, entriesToItems } from "@/lib/data/saved-meals";
 import type { Goals } from "@/lib/nutrition";
 import { MEALS, addDays, dayLabel, longDate, relativeLabel, toISO, type Meal } from "@/lib/meals";
+import { servingNamesFor } from "@/lib/serving";
 import { getSyncState, subscribeSync } from "@/lib/offline/sync";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { AddToMealSheet } from "@/components/add-to-meal-sheet";
@@ -283,6 +284,7 @@ function EditSheet({ entry, busy, error, onClose, onSave, onDelete }: {
         name={entry.name}
         per100={{ kcal: per(entry.kcal), protein_g: per(entry.protein_g), carbs_g: per(entry.carbs_g), fat_g: per(entry.fat_g) }}
         servingG={entry.serving_g}
+        servingNames={servingNamesFor({ name: entry.name, category: "" })}
         initialGrams={entry.grams}
         submitLabel="Guardar"
         busy={busy}

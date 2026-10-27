@@ -10,7 +10,8 @@ type Props = {
   servingG: number | null;
   initialGrams?: number;
   initialUnit?: "g" | "serving"; // "serving" empieza en 1 ración (recetas)
-  servingNames?: { one: string; many: string }; // por defecto Ración/Raciones (comida fuera: Unidad/Unidades)
+  // Por defecto Ración/Raciones; comida fuera: Unidad/Unidades; AOVE en spray: Puff/Puffs (y 10 por defecto).
+  servingNames?: { one: string; many: string; defaultCount?: number };
   submitLabel: string;
   onSubmit: (grams: number, servingG: number | null, macros: Per100) => void;
   busy?: boolean;
@@ -23,7 +24,7 @@ export function QuantityForm({ name, per100, servingG, initialGrams, initialUnit
   const startInServings = initialUnit === "serving" && !!servingG;
   const [unit, setUnit] = useState<"g" | "serving">(startInServings ? "serving" : "g");
   const [amount, setAmount] = useState(
-    startInServings ? "1" : initialGrams ? String(initialGrams) : servingG ? String(servingG) : "100",
+    startInServings ? String(names.defaultCount ?? 1) : initialGrams ? String(initialGrams) : servingG ? String(servingG) : "100",
   );
 
   const value = Number(amount.replace(",", "."));

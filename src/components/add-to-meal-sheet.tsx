@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { addEntry } from "@/lib/data/diary";
 import { listOptionsForMeal } from "@/lib/data/diets";
-import { foodLabel, type Food } from "@/lib/data/foods";
+import { findAoveSpray, foodLabel, type Food } from "@/lib/data/foods";
 import { addMealToDiary, listSavedMeals, type SavedMeal } from "@/lib/data/saved-meals";
 import { MEALS, type Meal } from "@/lib/meals";
 import { mealTotals, perServing, recipePer100, servingGrams } from "@/lib/recipes";
+import { aoveItem, needsAove, servingNamesFor } from "@/lib/serving";
 import { createClient } from "@/lib/supabase/client";
+import { AoveToggle } from "@/components/aove-toggle";
 import { FoodPicker } from "@/components/food-picker";
 import { OutsidePanel } from "@/components/outside-meal";
 import { QuantityForm } from "@/components/quantity-form";
@@ -30,10 +32,12 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
   const [mode, setMode] = useState<"foods" | "saved" | "diet" | "outside">("foods");
   const [food, setFood] = useState<Food | null>(null);
   const [saved, setSaved] = useState<SavedMeal | null>(null);
+  const [aoveOff, setAoveOff] = useState(false); // desmarcada la casilla del AOVE para este alimento
   const label = MEALS.find((m) => m.id === meal)!.label;
   const back = () => {
     setFood(null);
     setSaved(null);
+    setAoveOff(false);
   };
 
   return (
@@ -41,18 +45,25 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
       {food ? (
         <>
           <button onClick={back} className="mb-3 h-10 text-sm font-medium text-primary">← Cambiar alimento</button>
+          {needsAove(food) && <AoveToggle checked={!aoveOff} onChange={(on) => setAoveOff(!on)} />}
           <QuantityForm
             name={foodLabel(food)}
             per100={{ kcal: food.kcal_100g, protein_g: food.protein_100g, carbs_g: food.carbs_100g, fat_g: food.fat_100g }}
             servingG={food.serving_g}
-            initialUnit={food.category === "comida_fuera" ? "serving" : undefined}
-            servingNames={food.category === "comida_fuera" ? { one: "Unidad", many: "Unidades" } : undefined}
+            initialUnit={servingNamesFor(food) ? "serving" : undefined}
+            servingNames={servingNamesFor(food)}
             submitLabel="Añadir"
             busy={busy}
             onSubmit={(grams, servingG, m) =>
-              onWrite(() => addEntry(createClient(), {
-                entry_date: date, meal, food_id: food.id, name: foodLabel(food), grams, serving_g: servingG, ...m,
-              }), "No se pudo añadir la entrada.")
+              onWrite(async () => {
+                const sb = createClient();
+                await addEntry(sb, { entry_date: date, meal, food_id: food.id, name: foodLabel(food), grams, serving_g: servingG, ...m });
+                // Carne o pescado con la casilla marcada: se añade también el AOVE de la sartén.
+                if (needsAove(food) && !aoveOff) {
+                  const aove = await findAoveSpray(sb);
+                  if (aove) await addEntry(sb, { entry_date: date, meal, ...aoveItem(aove) });
+                }
+              }, "No se pudo añadir la entrada.")
             }
           />
         </>

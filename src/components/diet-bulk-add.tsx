@@ -5,6 +5,7 @@ import { addItemToOptions } from "@/lib/data/diets";
 import { foodLabel, type Food } from "@/lib/data/foods";
 import type { SavedItem, SavedMeal } from "@/lib/data/saved-meals";
 import { MEALS } from "@/lib/meals";
+import { servingNamesFor } from "@/lib/serving";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { FoodPicker } from "@/components/food-picker";
 import { QuantityForm } from "@/components/quantity-form";
@@ -51,6 +52,8 @@ export function DietBulkAddSheet({ options, onClose, onDone }: { options: SavedM
             name={foodLabel(food)}
             per100={{ kcal: food.kcal_100g, protein_g: food.protein_100g, carbs_g: food.carbs_100g, fat_g: food.fat_100g }}
             servingG={food.serving_g}
+            initialUnit={servingNamesFor(food) ? "serving" : undefined}
+            servingNames={servingNamesFor(food)}
             submitLabel="Siguiente"
             onSubmit={(grams, servingG, m) => setItem({ food_id: food.id, name: foodLabel(food), grams, serving_g: servingG, ...m })}
           />
