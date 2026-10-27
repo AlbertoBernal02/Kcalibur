@@ -19,7 +19,8 @@ export function WaterCard({ date }: { date: string }) {
   const [water, setWaterState] = useState<{ ml: number; goal: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [byContainer, setByContainer] = useState(false);
-  const [lastAdded, setLastAdded] = useState<number | null>(null);
+  // Cantidades sumadas desde que se abrió la pantalla (la última al final), para poder deshacerlas.
+  const [history, setHistory] = useState<number[]>([]);
 
   useEffect(() => {
     loadWater(createClient(), date).then(setWaterState).catch(() => setError("No se pudo cargar el agua."));
@@ -37,9 +38,9 @@ export function WaterCard({ date }: { date: string }) {
   }
 
   // Actualiza al instante y revierte si falla el guardado.
-  async function add(delta: number) {
+  async function add(delta: number, remember = true) {
     if (!water) return;
-    setLastAdded(delta > 0 ? delta : null);
+    if (remember && delta > 0) setHistory((h) => [...h, delta]);
     const prev = water;
     const next = { ...water, ml: Math.max(0, water.ml + delta) };
     setWaterState(next);
@@ -48,8 +49,17 @@ export function WaterCard({ date }: { date: string }) {
       await setWater(createClient(), await currentUserId(), date, next.ml);
     } catch {
       setWaterState(prev);
+      if (remember && delta > 0) setHistory((h) => h.slice(0, -1));
       setError("No se pudo guardar el agua.");
     }
+  }
+
+  // Deshace las últimas `count` sumas (o todas si no se indica) restando su total de una vez.
+  function undo(count = history.length) {
+    const removed = history.slice(-count);
+    if (removed.length === 0) return;
+    setHistory((h) => h.slice(0, h.length - removed.length));
+    add(-removed.reduce((a, b) => a + b, 0), false);
   }
 
   const pct = water ? Math.min((water.ml / water.goal) * 100, 100) : 0;
@@ -102,13 +112,22 @@ export function WaterCard({ date }: { date: string }) {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => lastAdded && add(-lastAdded)}
-                disabled={!lastAdded || water.ml === 0}
-                className="mt-2 h-10 w-full rounded-2xl text-sm font-semibold text-subtle transition active:scale-95 disabled:opacity-40"
-              >
-                Deshacer último{lastAdded ? ` (−${lastAdded.toLocaleString("es-ES")} ml)` : ""}
-              </button>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => undo(1)}
+                  disabled={history.length === 0}
+                  className="h-10 rounded-2xl text-sm font-semibold text-subtle transition active:scale-95 disabled:opacity-40"
+                >
+                  Deshacer{history.length > 0 ? ` (−${history[history.length - 1].toLocaleString("es-ES")} ml)` : ""}
+                </button>
+                <button
+                  onClick={() => undo()}
+                  disabled={history.length < 2}
+                  className="h-10 rounded-2xl text-sm font-semibold text-subtle transition active:scale-95 disabled:opacity-40"
+                >
+                  Deshacer todo{history.length > 1 ? ` (${history.length})` : ""}
+                </button>
+              </div>
             </>
           ) : (
             <div className="mt-3 grid grid-cols-3 gap-2">
