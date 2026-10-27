@@ -68,3 +68,10 @@ export function summarizeDay(options: OptionLike[], selection: Selection): DaySu
   }
   return { chosen, minKcal, maxKcal, slotsWithOptions };
 }
+
+// Posición que le toca a un elemento nuevo al final de cada opción (max + 1; 0 si la opción no tiene elementos).
+export function nextPositions(rows: { saved_meal_id: string; position: number }[], optionIds: string[]): Map<string, number> {
+  const next = new Map<string, number>(optionIds.map((id) => [id, 0]));
+  for (const r of rows) if (next.has(r.saved_meal_id)) next.set(r.saved_meal_id, Math.max(next.get(r.saved_meal_id)!, r.position + 1));
+  return next;
+}

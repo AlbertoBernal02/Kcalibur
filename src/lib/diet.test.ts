@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { defaultSelection, normalizeSelection, optionsBySlot, summarizeDay, type OptionLike } from "./diet.ts";
+import { defaultSelection, nextPositions, normalizeSelection, optionsBySlot, summarizeDay, type OptionLike } from "./diet.ts";
 
 const opt = (id: string, dietMeal: OptionLike["dietMeal"], kcal: number, p = 0): OptionLike => ({
   id, dietMeal, items: [{ grams: 100, kcal, protein_g: p, carbs_g: 0, fat_g: 0 }],
@@ -47,4 +47,15 @@ test("normalizeSelection descarta opciones borradas y completa las que faltan", 
 test("dieta vacía: todo a cero sin NaN", () => {
   const s = summarizeDay([], {});
   assert.deepEqual([s.chosen.kcal, s.minKcal, s.maxKcal, s.slotsWithOptions], [0, 0, 0, 0]);
+});
+
+test("nextPositions: al final de cada opción, y 0 si está vacía", () => {
+  const rows = [
+    { saved_meal_id: "a", position: 0 },
+    { saved_meal_id: "a", position: 2 },
+    { saved_meal_id: "b", position: 0 },
+    { saved_meal_id: "otra", position: 9 }, // fuera de las opciones pedidas: se ignora
+  ];
+  const m = nextPositions(rows, ["a", "b", "c"]);
+  assert.deepEqual([...m], [["a", 3], ["b", 1], ["c", 0]]);
 });

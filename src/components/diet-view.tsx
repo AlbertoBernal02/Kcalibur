@@ -11,6 +11,7 @@ import { normalizeSelection, optionsBySlot, summarizeDay, type Selection } from 
 import { MEALS, toISO, type Meal } from "@/lib/meals";
 import { mealTotals } from "@/lib/recipes";
 import { createClient } from "@/lib/supabase/client";
+import { DietBulkAddSheet } from "@/components/diet-bulk-add";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, inputCls } from "@/components/ui";
 
@@ -35,6 +36,7 @@ export function DietView({ id }: { id: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [bulk, setBulk] = useState(false);
 
   useEffect(() => {
     getDiet(createClient(), id)
@@ -202,7 +204,26 @@ export function DietView({ id }: { id: string }) {
         );
       })}
 
-      <Button variant="secondary" className="mt-4 text-danger" onClick={remove} disabled={busy}>Borrar dieta</Button>
+      <Button variant="secondary" className="mt-4" onClick={() => setBulk(true)} disabled={busy}>Añadir un alimento a varias opciones</Button>
+      <Button variant="secondary" className="mt-3 text-danger" onClick={remove} disabled={busy}>Borrar dieta</Button>
+
+      {bulk && (
+        <DietBulkAddSheet
+          options={diet.options}
+          onClose={() => setBulk(false)}
+          onDone={async (count) => {
+            setBulk(false);
+            // Recarga la dieta para ver el elemento nuevo y el total recalculado.
+            try {
+              setDiet(await getDiet(createClient(), id));
+            } catch {
+              setError("Añadido, pero no se pudo refrescar la dieta: recarga la página.");
+            }
+            setNotice(`Alimento añadido a ${count} ${count === 1 ? "opción" : "opciones"} ✓`);
+            setTimeout(() => setNotice(null), 3500);
+          }}
+        />
+      )}
 
       {editing && (
         <EditDietSheet

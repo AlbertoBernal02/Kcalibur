@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MEAL_SELECT, fromRow, type Row, type SavedMeal } from "@/lib/data/saved-meals";
+import { nextPositions } from "@/lib/diet";
+import { MEAL_SELECT, fromRow, type Row, type SavedItem, type SavedMeal } from "@/lib/data/saved-meals";
 import type { Meal } from "@/lib/meals";
 import { cachedRead } from "@/lib/offline/store";
 
@@ -51,4 +52,15 @@ export async function deleteDiet(sb: SupabaseClient, id: string) {
 export async function listOptionsForMeal(sb: SupabaseClient, meal: Meal): Promise<{ diet: string; option: SavedMeal }[]> {
   const diets = await listDiets(sb);
   return diets.flatMap((d) => d.options.filter((o) => o.dietMeal === meal).map((option) => ({ diet: d.name, option })));
+}
+
+// Añade el mismo elemento (con sus valores ya calculados) al final de varias opciones de dieta, en una sola inserción.
+export async function addItemToOptions(sb: SupabaseClient, userId: string, optionIds: string[], item: SavedItem) {
+  if (optionIds.length === 0) return;
+  const existing = await sb.from("saved_meal_items").select("saved_meal_id, position").in("saved_meal_id", optionIds);
+  if (existing.error) throw existing.error;
+  const next = nextPositions(existing.data as { saved_meal_id: string; position: number }[], optionIds);
+  const rows = optionIds.map((id) => ({ ...item, user_id: userId, saved_meal_id: id, position: next.get(id)! }));
+  const ins = await sb.from("saved_meal_items").insert(rows);
+  if (ins.error) throw ins.error;
 }
