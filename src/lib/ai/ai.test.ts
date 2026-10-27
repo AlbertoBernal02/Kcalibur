@@ -141,3 +141,10 @@ test("contexto: los valores de referencia incluyen el peso y las kcal de una uni
   });
   assert.match(c, /1 unidad\/ración = 250 g = 725 kcal/);
 });
+
+test("prompt: limita el asistente a la app y prohíbe recetas paso a paso", async () => {
+  const { SYSTEM_PROMPT } = await import("./prompt.ts");
+  assert.match(SYSTEM_PROMPT, /Alcance \(muy importante\)/);
+  assert.match(SYSTEM_PROMPT, /SIN pasos de cocina/);
+  assert.match(SYSTEM_PROMPT, /NO lo hagas/);
+});
