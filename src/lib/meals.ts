@@ -17,6 +17,11 @@ export const MEAL_COLOR: Record<Meal, string> = {
   extras: "#ec4899",
 };
 
+// Comida más probable según la hora local (0-23): desayuno hasta las 11, almuerzo hasta las 17, merienda hasta las 20.
+export function mealByHour(hour: number): Meal {
+  return hour < 11 ? "breakfast" : hour < 17 ? "lunch" : hour < 20 ? "snack" : "dinner";
+}
+
 // Fecha local como "YYYY-MM-DD" (toISOString usaría UTC y desfasaría el día).
 export function toISO(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");

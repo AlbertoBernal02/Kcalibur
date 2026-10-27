@@ -1,11 +1,13 @@
 // Configuración del proveedor de IA (cualquier API compatible con OpenAI). Pura: recibe las variables de entorno.
-// Por defecto: Groq con Qwen 3, que tiene plan gratuito. Se cambia con variables de entorno, sin tocar código:
+// Por defecto: Groq con gpt-oss-120b, que tiene plan gratuito. Se cambia con variables de entorno, sin tocar código:
 //   AI_API_KEY, AI_BASE_URL, AI_MODEL, AI_REASONING_EFFORT.
 
 export type AiConfig = { baseUrl: string; model: string; apiKey: string | null; extraBody: Record<string, unknown> };
 
 export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
-export const DEFAULT_MODEL = "qwen/qwen3.8-27b";
+// gpt-oss-120b razona poco con esfuerzo "low" y termina siempre la respuesta. Qwen 3 en Groq gasta casi todos los tokens
+// de salida razonando (respuestas cortadas o vacías) y además tiene un tope propio de 1.000 tokens de salida por minuto.
+export const DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 export function getAiConfig(env: Record<string, string | undefined>): AiConfig | null {
   const baseUrl = (env.AI_BASE_URL || GROQ_BASE_URL).replace(/\/+$/, "");
@@ -14,14 +16,16 @@ export function getAiConfig(env: Record<string, string | undefined>): AiConfig |
   const local = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(baseUrl);
   if (!apiKey && !local) return null;
 
-  // Qwen 3 en Groq: razonamiento "low" (oculto). Con "none" responde "pensando en voz alta" y falla en las
-  // cuentas de seguimiento; con "low" acierta y sigue tardando ~2 s. Con otro proveedor solo se envía si se
-  // pide expresamente (un parámetro desconocido podría rechazarse).
+  // Razonamiento "low" en Groq. Con otro proveedor solo se envía si se pide expresamente (un parámetro desconocido
+  // podría rechazarse). `reasoning_format: "hidden"` solo lo usa Qwen (con "none" responde "pensando en voz alta");
+  // gpt-oss ya devuelve el razonamiento aparte, fuera del texto de la respuesta.
+  const model = env.AI_MODEL || DEFAULT_MODEL;
   const effort = env.AI_REASONING_EFFORT || (env.AI_BASE_URL ? undefined : "low");
+  const hide = /qwen/i.test(model) && effort !== "none";
   return {
     baseUrl,
     apiKey,
-    model: env.AI_MODEL || DEFAULT_MODEL,
-    extraBody: effort ? { reasoning_effort: effort, ...(effort === "none" ? {} : { reasoning_format: "hidden" }) } : {},
+    model,
+    extraBody: effort ? { reasoning_effort: effort, ...(hide ? { reasoning_format: "hidden" } : {}) } : {},
   };
 }

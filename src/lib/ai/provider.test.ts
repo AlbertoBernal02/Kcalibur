@@ -8,19 +8,24 @@ test("proveedor: sin clave no está configurado (salvo servidor local)", () => {
   assert.ok(getAiConfig({ AI_BASE_URL: "http://localhost:11434/v1", AI_MODEL: "qwen3:8b" }));
 });
 
-test("proveedor: por defecto Groq + Qwen con razonamiento bajo y oculto", () => {
+test("proveedor: por defecto Groq + gpt-oss con razonamiento bajo", () => {
   const c = getAiConfig({ AI_API_KEY: "k" })!;
   assert.equal(c.baseUrl, "https://api.groq.com/openai/v1");
-  assert.equal(c.model, "qwen/qwen3.8-27b");
-  assert.deepEqual(c.extraBody, { reasoning_effort: "low", reasoning_format: "hidden" });
-  assert.deepEqual(getAiConfig({ AI_API_KEY: "k", AI_REASONING_EFFORT: "none" })!.extraBody, { reasoning_effort: "none" });
+  assert.equal(c.model, "openai/gpt-oss-120b");
+  assert.deepEqual(c.extraBody, { reasoning_effort: "low" });
+});
+
+test("proveedor: con Qwen el razonamiento va oculto (salvo con esfuerzo none)", () => {
+  const qwen = { AI_API_KEY: "k", AI_MODEL: "qwen/qwen3.8-27b" };
+  assert.deepEqual(getAiConfig(qwen)!.extraBody, { reasoning_effort: "low", reasoning_format: "hidden" });
+  assert.deepEqual(getAiConfig({ ...qwen, AI_REASONING_EFFORT: "none" })!.extraBody, { reasoning_effort: "none" });
 });
 
 test("proveedor: con otro proveedor no se envían parámetros desconocidos", () => {
   const c = getAiConfig({ AI_API_KEY: "k", AI_BASE_URL: "https://openrouter.ai/api/v1/", AI_MODEL: "x/y" })!;
   assert.equal(c.baseUrl, "https://openrouter.ai/api/v1");
   assert.deepEqual(c.extraBody, {});
-  assert.deepEqual(getAiConfig({ AI_API_KEY: "k", AI_REASONING_EFFORT: "low" })!.extraBody, { reasoning_effort: "low", reasoning_format: "hidden" });
+  assert.deepEqual(getAiConfig({ AI_API_KEY: "k", AI_REASONING_EFFORT: "low" })!.extraBody, { reasoning_effort: "low" });
 });
 
 test("SSE: eventos completos aunque lleguen partidos", () => {

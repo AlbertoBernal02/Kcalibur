@@ -16,7 +16,7 @@ export type AiData = {
 };
 
 // Alimento de la base de datos de la app (valores por 100 g) para usar como referencia en las cuentas.
-export type RefFood = { name: string; state: "raw" | "cooked" | null; kcal_100g: number; protein_100g: number; carbs_100g: number; fat_100g: number };
+export type RefFood = { name: string; state: "raw" | "cooked" | null; kcal_100g: number; protein_100g: number; carbs_100g: number; fat_100g: number; serving_g?: number | null };
 
 const STOPWORDS = new Set(["para", "cuantas", "cuantos", "cuanto", "cuanta", "como", "esta", "este", "esto", "esos", "esas", "cambia", "cambiar", "cambio", "opcion", "desayuno", "almuerzo", "merienda", "cena", "comida", "dieta", "kcal", "gramos", "proteina", "hidratos", "grasa", "tiene", "tengo", "puedo", "quiero", "mejor", "entre", "donde", "sobre", "luego", "hacer", "hago", "sino", "pero", "porque", "tambien"]);
 const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -84,7 +84,7 @@ function sections(d: AiData, withItems: boolean): string[] {
     const st = { raw: " crudo", cooked: " cocinado" } as const;
     out.push(
       "Valores de referencia por 100 g de la base de alimentos de la app (úsalos para las cuentas en vez de tus estimaciones): " +
-        d.reference.map((f) => `${clean(f.name)}${f.state ? st[f.state] : ""} ${r(f.kcal_100g)} kcal (P ${f.protein_100g}, H ${f.carbs_100g}, G ${f.fat_100g})`).join("; "),
+        d.reference.map((f) => `${clean(f.name)}${f.state ? st[f.state] : ""} ${r(f.kcal_100g)} kcal (P ${f.protein_100g}, H ${f.carbs_100g}, G ${f.fat_100g})${f.serving_g ? `; 1 unidad/ración = ${f.serving_g} g = ${r((f.kcal_100g * f.serving_g) / 100)} kcal` : ""}`).join("; "),
     );
   }
 

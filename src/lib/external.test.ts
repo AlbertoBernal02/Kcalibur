@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { outsideEntry, parseAmount, scaleDish } from "./external.ts";
+import { looksLikeMealReport, outsideEntry, parseAmount, scaleDish } from "./external.ts";
 
 test("parseAmount acepta coma y punto y rechaza lo no válido", () => {
   assert.equal(parseAmount("12,5", 100), 12.5);
@@ -25,4 +25,11 @@ test("outsideEntry guarda totales, 1 ración y marca fuera", () => {
 test("scaleDish escala kcal y macros", () => {
   const d = scaleDish({ name: "x", kcal: 100, protein_g: 10, carbs_g: 20, fat_g: 5 }, 1.5);
   assert.deepEqual(d, { name: "x", kcal: 150, protein_g: 15, carbs_g: 30, fat_g: 7.5 });
+});
+
+test("looksLikeMealReport detecta que se ha comido algo", () => {
+  for (const t of ["he comido hamburguesa con bacon", "Hoy he cenado sushi", "me he tomado una pizza", "comí un buffet de tacos", "cené en el Domino's", "Me he zampado dos hamburguesas", "he comido una pizza, ¿cuántas kcal serán?"])
+    assert.equal(looksLikeMealReport(t), true, t);
+  for (const t of ["¿Cuánto me falta hoy?", "Sugiere una cena", "¿Cuántas kcal tiene una hamburguesa?", "voy a cenar fuera", "¿Cuántas kcal tiene un tomate?", "ideas de comida", "¿Qué he comido hoy en el almuerzo y cuántas kcal fueron?"])
+    assert.equal(looksLikeMealReport(t), false, t);
 });

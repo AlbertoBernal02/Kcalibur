@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         model: cfg.model,
         messages: [{ role: "system", content: `${SYSTEM_PROMPT}\n\n<datos_usuario>\n${context}\n</datos_usuario>` }, ...parsed.messages],
         stream: true,
-        max_tokens: 800,
+        max_tokens: 1200,
         temperature: 0.4,
         ...cfg.extraBody,
       }),

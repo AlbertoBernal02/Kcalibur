@@ -21,7 +21,7 @@ export async function loadAiData(sb: SupabaseClient, date: string, recentTexts: 
     sb.from("diets").select("id, name, notes").order("created_at"),
     sb.from("saved_meals").select("name, diet_id, diet_meal, saved_meal_items(name, grams, kcal, protein_g, carbs_g, fat_g)").not("diet_id", "is", null).order("created_at"),
     // Catálogo (genéricos + propios): solo se envían al modelo las filas que se mencionan en la conversación.
-    sb.from("foods").select("name, state, kcal_100g, protein_100g, carbs_100g, fat_100g").limit(1000),
+    sb.from("foods").select("name, state, kcal_100g, protein_100g, carbs_100g, fat_100g, serving_g").limit(1000),
   ]);
 
   type Item = { name: string; grams: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number };

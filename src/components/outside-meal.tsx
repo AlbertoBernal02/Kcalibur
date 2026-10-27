@@ -1,16 +1,17 @@
 "use client";
 
 import { Pencil, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Estimate } from "@/lib/ai/estimate";
 import { requestEstimate } from "@/lib/ai/estimate-client";
 import { addEntries, type Entry } from "@/lib/data/diary";
 import type { Food } from "@/lib/data/foods";
 import { createSavedMeal, entriesToItems } from "@/lib/data/saved-meals";
 import { MAX_DISH_KCAL, outsideEntry, parseAmount, scaleDish, type OutsideDish } from "@/lib/external";
-import type { Meal } from "@/lib/meals";
+import { MEALS, mealByHour, toISO, type Meal } from "@/lib/meals";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { FoodPicker } from "@/components/food-picker";
+import { Sheet } from "@/components/sheet";
 import { Button, Field, inputBase, inputCls } from "@/components/ui";
 
 type Write = (action: () => Promise<void>, failText: string, okText?: string) => void;
@@ -135,8 +136,10 @@ export function DishForm({ initial, submitLabel, busy, allowSave, onSubmit, onDe
 }
 
 // Describe la comida → la IA estima kcal y macros por elemento (editables) con un rango → se añade al diario.
-function AiEstimate({ meal, date, label, busy, onWrite }: { meal: Meal; date: string; label: string; busy: boolean; onWrite: Write }) {
-  const [text, setText] = useState("");
+function AiEstimate({ meal, date, label, busy, onWrite, initialText, autoRun }: {
+  meal: Meal; date: string; label: string; busy: boolean; onWrite: Write; initialText?: string; autoRun?: boolean;
+}) {
+  const [text, setText] = useState(initialText ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [est, setEst] = useState<Estimate | null>(null);
@@ -163,6 +166,15 @@ function AiEstimate({ meal, date, label, busy, onWrite }: { meal: Meal; date: st
     }
   }
 
+  const started = useRef(false);
+  useEffect(() => {
+    if (autoRun && text.trim() && !started.current) {
+      started.current = true;
+      void estimate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al montar
+  }, []);
+
   // Platos finales: kcal editadas (los macros escalan con ellas) y, si se pide, el valor alto del rango.
   const edited = est ? kcalText.map((t) => parseAmount(t, MAX_DISH_KCAL)) : [];
   const allValid = edited.length > 0 && edited.every((k) => k !== null);
@@ -186,7 +198,7 @@ function AiEstimate({ meal, date, label, busy, onWrite }: { meal: Meal; date: st
           maxLength={500}
           onChange={(e) => setText(e.target.value)}
           placeholder="Ej. buffet de tacos de TeQuieroTaco: 6 tacos, nachos con queso y 2 cervezas"
-          autoFocus
+          autoFocus={!initialText}
         />
       </Field>
       <Button onClick={estimate} disabled={!text.trim() || loading} className="flex items-center justify-center gap-2">
@@ -242,5 +254,40 @@ function AiEstimate({ meal, date, label, busy, onWrite }: { meal: Meal; date: st
         </>
       )}
     </div>
+  );
+}
+
+// Desde el chat: estima la comida que el usuario ha contado y la añade al diario de hoy (a la comida elegida).
+export function EstimateToDiarySheet({ text, onClose, onAdded }: { text: string; onClose: () => void; onAdded: (mealLabel: string) => void }) {
+  const [date] = useState(() => toISO(new Date()));
+  const [meal, setMeal] = useState<Meal>(() => mealByHour(new Date().getHours()));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const label = MEALS.find((m) => m.id === meal)!.label;
+
+  // Misma lógica que el diario: bloquea el botón mientras escribe y muestra el fallo dentro de la hoja.
+  const onWrite: Write = async (action, failText) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      onAdded(label);
+    } catch {
+      setError(failText);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Sheet title="Añadir al diario" onClose={onClose} error={error}>
+      <div className="flex flex-col gap-4">
+        <Field label="Comida de hoy">
+          <select className={inputCls} value={meal} onChange={(e) => setMeal(e.target.value as Meal)}>
+            {MEALS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
+        </Field>
+        <AiEstimate meal={meal} date={date} label={label} busy={busy} onWrite={onWrite} initialText={text.slice(0, 500)} autoRun />
+      </div>
+    </Sheet>
   );
 }

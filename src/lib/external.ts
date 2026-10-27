@@ -29,3 +29,10 @@ export function outsideEntry(dish: OutsideDish, date: string, meal: Meal): Omit<
 export function scaleDish(d: OutsideDish, factor: number): OutsideDish {
   return { name: d.name, kcal: d.kcal * factor, protein_g: d.protein_g * factor, carbs_g: d.carbs_g * factor, fat_g: d.fat_g * factor };
 }
+
+// ¿El mensaje cuenta que el usuario ha comido algo? ("he comido…", "cené…", "me he tomado…"). Heurística sencilla:
+// decide si el chat ofrece el botón "Añadir al diario"; si falla, el usuario puede usar la pestaña Fuera.
+export function looksLikeMealReport(text: string): boolean {
+  // (?<!\p{L})…(?!\p{L}) hace de límite de palabra también con tildes ("comí"), donde \b falla.
+  return /(?<!\p{L})((he|hemos|me he|me hemos)\s+(comido|cenado|desayunado|almorzado|merendado|tomado|picado|zampado)|com[ií]|cen[eé]|desayun[eé]|almorc[eé]|merend[eé]|tom[eé]|me com[ií]|me zamp[eé])(?!\p{L})/iu.test(text.replace(/¿[^?]*\?/g, " ")); // una pregunta ("¿qué he comido hoy?") no cuenta como relato
+}

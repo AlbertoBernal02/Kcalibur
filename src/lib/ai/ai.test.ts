@@ -133,3 +133,11 @@ test("limitador: bloquea al superar el límite y se libera con la ventana", () =
   assert.deepEqual(rl.check("otro", 200), { ok: true }); // claves independientes
   assert.deepEqual(rl.check("u", 1100), { ok: true }); // el primer hit ya salió de la ventana
 });
+
+test("contexto: los valores de referencia incluyen el peso y las kcal de una unidad", () => {
+  const c = buildContext({
+    ...base,
+    reference: [{ name: "Hamburguesa street food completa (unidad)", state: null, kcal_100g: 290, protein_100g: 15, carbs_100g: 20, fat_100g: 16, serving_g: 250 }],
+  });
+  assert.match(c, /1 unidad\/ración = 250 g = 725 kcal/);
+});

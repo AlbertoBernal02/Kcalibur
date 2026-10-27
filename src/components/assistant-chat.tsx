@@ -1,10 +1,13 @@
 "use client";
 
-import { ArrowUp, Sparkles, Square, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Plus, Sparkles, Square, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { plainMath } from "@/lib/ai/format";
+import { looksLikeMealReport } from "@/lib/external";
 import { toISO } from "@/lib/meals";
 import { cacheGet, cacheSet } from "@/lib/offline/store";
+import { EstimateToDiarySheet } from "@/components/outside-meal";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -43,6 +46,8 @@ export function AssistantChat() {
   const [error, setError] = useState<string | null>(null);
   const [notConfigured, setNotConfigured] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null); // texto de la comida a estimar y añadir al diario
+  const [added, setAdded] = useState<string | null>(null); // comida a la que se acaba de añadir
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +74,7 @@ export function AssistantChat() {
     setMessages([...history, { role: "assistant", content: "" }]);
     setInput("");
     setError(null);
+    setAdded(null);
     setBusy(true);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -159,18 +165,46 @@ export function AssistantChat() {
                 ))}
               </div>
             )}
-            {messages.map((m, i) => (
-              <div key={i} className={`max-w-[88%] rounded-3xl px-4 py-3 text-[15px] leading-relaxed ${m.role === "user" ? "self-end bg-primary text-primary-fg" : "self-start bg-card"}`}>
-                {m.role === "assistant" ? (
-                  m.content ? <Rich text={m.content} /> : <span className="inline-flex gap-1" aria-label="Escribiendo"><i className="h-2 w-2 animate-bounce rounded-full bg-subtle" /><i className="h-2 w-2 animate-bounce rounded-full bg-subtle [animation-delay:150ms]" /><i className="h-2 w-2 animate-bounce rounded-full bg-subtle [animation-delay:300ms]" /></span>
-                ) : (
-                  <p className="whitespace-pre-wrap">{m.content}</p>
-                )}
-              </div>
-            ))}
+            {messages.map((m, i) => {
+              // Si el usuario contó lo que ha comido, se ofrece estimarlo y añadirlo al diario (la respuesta de texto no calcula nada).
+              const prev = messages[i - 1];
+              const canAdd = m.role === "assistant" && !!m.content && !(busy && i === messages.length - 1) && prev?.role === "user" && looksLikeMealReport(prev.content);
+              return (
+                <Fragment key={i}>
+                  <div className={`max-w-[88%] rounded-3xl px-4 py-3 text-[15px] leading-relaxed ${m.role === "user" ? "self-end bg-primary text-primary-fg" : "self-start bg-card"}`}>
+                    {m.role === "assistant" ? (
+                      m.content ? <Rich text={m.content} /> : <span className="inline-flex gap-1" aria-label="Escribiendo"><i className="h-2 w-2 animate-bounce rounded-full bg-subtle" /><i className="h-2 w-2 animate-bounce rounded-full bg-subtle [animation-delay:150ms]" /><i className="h-2 w-2 animate-bounce rounded-full bg-subtle [animation-delay:300ms]" /></span>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    )}
+                  </div>
+                  {canAdd && (
+                    <button onClick={() => setAdding(prev.content)} className="-mt-1 flex h-10 items-center gap-1.5 self-start rounded-full bg-primary/10 px-4 text-sm font-semibold text-primary transition active:scale-95">
+                      <Plus size={16} /> Añadir al diario
+                    </button>
+                  )}
+                </Fragment>
+              );
+            })}
+            {added && (
+              <p role="status" className="self-start rounded-2xl bg-primary/10 px-4 py-3 text-sm text-primary">
+                Añadido a {added} ✓ <Link href="/" className="font-semibold underline">Ver diario</Link>
+              </p>
+            )}
             {error && <p role="alert" className="self-start rounded-2xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
             <div ref={endRef} />
           </div>
+
+          {adding && (
+            <EstimateToDiarySheet
+              text={adding}
+              onClose={() => setAdding(null)}
+              onAdded={(label) => {
+                setAdding(null);
+                setAdded(label);
+              }}
+            />
+          )}
 
           <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] mt-4 bg-gradient-to-t from-background via-background to-transparent pt-3">
             <form
