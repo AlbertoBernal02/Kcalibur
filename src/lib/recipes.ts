@@ -1,3 +1,4 @@
+import type { SavedItem } from "./data/saved-meals.ts";
 import { totals, type Totals } from "./summary.ts";
 
 type Item = Totals & { grams: number };
@@ -27,4 +28,10 @@ export function perServing(items: Item[], servings: number): Totals {
   const t = mealTotals(items);
   const s = servings > 0 ? servings : 1;
   return { kcal: round1(t.kcal / s), protein_g: round1(t.protein_g / s), carbs_g: round1(t.carbs_g / s), fat_g: round1(t.fat_g / s) };
+}
+
+// Filas para insertar los elementos de una comida guardada. TODAS llevan las mismas claves: en una inserción en bloque,
+// una clave que falte en alguna fila se envía como null y la base de datos rechaza el lote (p. ej. `external` NOT NULL).
+export function savedItemRows(userId: string, mealId: string, items: SavedItem[]) {
+  return items.map((it, position) => ({ ...it, external: it.external ?? false, user_id: userId, saved_meal_id: mealId, position }));
 }

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { addEntries, type Entry } from "@/lib/data/diary";
 import type { Meal } from "@/lib/meals";
 import { cachedRead } from "@/lib/offline/store";
+import { savedItemRows } from "@/lib/recipes";
 
 export type Kind = "meal" | "recipe";
 
@@ -67,9 +68,6 @@ export async function getSavedMeal(sb: SupabaseClient, id: string): Promise<Save
   return data ? fromRow(data as unknown as Row) : null;
 }
 
-const itemRows = (userId: string, mealId: string, items: SavedItem[]) =>
-  items.map((it, position) => ({ ...it, user_id: userId, saved_meal_id: mealId, position }));
-
 // Crea una comida con sus elementos. Si fallan los elementos se borra la comida para no dejarla vacía.
 export async function createSavedMeal(
   sb: SupabaseClient, userId: string, meal: Omit<SavedMeal, "id">,
@@ -80,7 +78,7 @@ export async function createSavedMeal(
     diet_id: meal.dietId, diet_meal: meal.dietMeal,
   });
   if (m.error) throw m.error;
-  const i = await sb.from("saved_meal_items").insert(itemRows(userId, id, meal.items));
+  const i = await sb.from("saved_meal_items").insert(savedItemRows(userId, id, meal.items));
   if (i.error) {
     await sb.from("saved_meals").delete().eq("id", id);
     throw i.error;
@@ -88,15 +86,23 @@ export async function createSavedMeal(
   return id;
 }
 
-// Actualiza la comida y reemplaza sus elementos.
-// ponytail: borrar+insertar no es atómico (PostgREST no tiene transacciones); si el insert falla se pierden los elementos. RPC si importa.
+// Actualiza la comida y reemplaza sus elementos sin poder dejarla vacía: primero inserta los nuevos y solo después
+// borra los antiguos. Si falla el borrado, deshace la inserción (los antiguos se conservan intactos).
+// ponytail: sigue sin ser atómico (PostgREST no tiene transacciones); una función RPC lo sería.
 export async function updateSavedMeal(sb: SupabaseClient, userId: string, id: string, meal: Omit<SavedMeal, "id">) {
   const m = await sb.from("saved_meals").update({ name: meal.name, kind: meal.kind, servings: meal.servings }).eq("id", id);
   if (m.error) throw m.error;
-  const d = await sb.from("saved_meal_items").delete().eq("saved_meal_id", id);
-  if (d.error) throw d.error;
-  const i = await sb.from("saved_meal_items").insert(itemRows(userId, id, meal.items));
-  if (i.error) throw i.error;
+  const old = await sb.from("saved_meal_items").select("id").eq("saved_meal_id", id);
+  if (old.error) throw old.error;
+  const ins = await sb.from("saved_meal_items").insert(savedItemRows(userId, id, meal.items)).select("id");
+  if (ins.error) throw ins.error;
+  const oldIds = old.data.map((r) => r.id as string);
+  if (oldIds.length === 0) return;
+  const del = await sb.from("saved_meal_items").delete().in("id", oldIds);
+  if (del.error) {
+    await sb.from("saved_meal_items").delete().in("id", ins.data.map((r) => r.id as string));
+    throw del.error;
+  }
 }
 
 export async function deleteSavedMeal(sb: SupabaseClient, id: string) {
