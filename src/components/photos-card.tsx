@@ -6,7 +6,7 @@ import { resizeImage } from "@/lib/image";
 import { deletePhoto, listPhotos, uploadPhoto, type Photo } from "@/lib/data/photos";
 import { loadWeights, type WeightPoint } from "@/lib/data/tracking";
 import { addDays, longDate } from "@/lib/meals";
-import { daysBetween, nearestWeight, nextPhotoInfo } from "@/lib/photos";
+import { daysBetween, groupByDate, nearestWeight, nextPhotoInfo, PHOTO_VIEWS, type PhotoView } from "@/lib/photos";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, inputCls } from "@/components/ui";
@@ -16,11 +16,10 @@ const signed = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${nf(Math.abs(
 
 // Fotos de progreso: recordatorio quincenal, galería, comparador antes/después y evolución.
 export function PhotosCard({ today }: { today: string }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<Photo[] | null>(null);
   const [weights, setWeights] = useState<WeightPoint[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [adding, setAdding] = useState(false);
   const [viewing, setViewing] = useState<Photo | null>(null);
 
   // Fotos + pesos desde unos días antes de la más antigua (para asociar a cada foto su peso).
@@ -53,7 +52,7 @@ export function PhotosCard({ today }: { today: string }) {
     };
   }, [fetchAll]);
 
-  const weightOf = (p: Photo) => nearestWeight(weights, p.taken_on);
+  const weightOn = (date: string) => nearestWeight(weights, date);
   const next = nextPhotoInfo(photos?.[0]?.taken_on ?? null, today);
 
   return (
@@ -69,60 +68,61 @@ export function PhotosCard({ today }: { today: string }) {
               : `Próxima foto quincenal en ${next.days} días.`}
       </p>
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        aria-label="Elegir foto"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = ""; // permite elegir la misma foto otra vez
-          if (f) setFile(f);
-        }}
-      />
-      <Button type="button" onClick={() => fileRef.current?.click()} className="mt-3 flex items-center justify-center gap-2">
-        <Camera size={20} /> Añadir foto
+      <Button type="button" onClick={() => setAdding(true)} className="mt-3 flex items-center justify-center gap-2">
+        <Camera size={20} /> Añadir fotos
       </Button>
 
       {error && <p role="alert" className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
 
       {photos && photos.length > 0 && (
         <>
-          <ul className="mt-4 grid grid-cols-3 gap-2">
-            {photos.map((p) => (
-              <li key={p.id}>
-                <button onClick={() => setViewing(p)} aria-label={`Ver foto del ${longDate(p.taken_on)}`} className="relative block w-full overflow-hidden rounded-2xl bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal: next/image no aporta */}
-                  <img src={p.url} alt="" loading="lazy" className="aspect-[3/4] w-full object-cover" />
-                  <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-xs text-white">{p.taken_on.slice(5).split("-").reverse().join("/")}</span>
-                </button>
-              </li>
+          <div className="mt-4 flex flex-col gap-4">
+            {groupByDate(photos).map((g) => (
+              <div key={g.date}>
+                <p className="mb-1 text-sm font-medium">{longDate(g.date)}</p>
+                <ul className="grid grid-cols-3 gap-2">
+                  {PHOTO_VIEWS.map((v) => {
+                    const p = g.items.find((i) => i.view === v.id);
+                    return (
+                      <li key={v.id}>
+                        {p ? (
+                          <button onClick={() => setViewing(p)} aria-label={`Ver ${v.label.toLowerCase()} del ${longDate(g.date)}`} className="relative block w-full overflow-hidden rounded-2xl bg-muted">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal: next/image no aporta */}
+                            <img src={p.url} alt="" loading="lazy" className="aspect-[3/4] w-full object-cover" />
+                            <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-xs text-white">{v.label}</span>
+                          </button>
+                        ) : (
+                          <div className="flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-dashed border-border text-xs text-subtle">{v.label}</div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ))}
-          </ul>
-          {photos.length >= 2 && <Compare photos={photos} weightOf={weightOf} />}
-          <Evolution photos={photos} weightOf={weightOf} />
+          </div>
+          {groupByDate(photos).length >= 2 && <Compare photos={photos} weightOn={weightOn} />}
+          <Evolution photos={photos} weightOn={weightOn} />
         </>
       )}
 
-      {file && (
-        <AddPhotoSheet
-          file={file}
+      {adding && (
+        <AddPhotosSheet
           today={today}
-          onClose={() => setFile(null)}
+          onClose={() => setAdding(false)}
           onSaved={async () => {
-            setFile(null);
-            await reload().catch(() => setError("Foto guardada, pero no se pudo refrescar la galería."));
+            setAdding(false);
+            await reload().catch(() => setError("Fotos guardadas, pero no se pudo refrescar la galería."));
           }}
         />
       )}
 
       {viewing && (
-        <Sheet title={longDate(viewing.taken_on, true)} onClose={() => setViewing(null)}>
+        <Sheet title={`${PHOTO_VIEWS.find((v) => v.id === viewing.view)?.label ?? ""} · ${longDate(viewing.taken_on, true)}`} onClose={() => setViewing(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal */}
           <img src={viewing.url} alt={`Foto de progreso del ${longDate(viewing.taken_on)}`} className="max-h-[60dvh] w-full rounded-2xl object-contain" />
           <p className="mt-3 text-sm text-subtle">
-            {weightOf(viewing) !== null ? `Peso cercano: ${nf(weightOf(viewing)!)} kg` : "Sin peso registrado cerca de esta fecha"}
+            {weightOn(viewing.taken_on) !== null ? `Peso cercano: ${nf(weightOn(viewing.taken_on)!)} kg` : "Sin peso registrado cerca de esta fecha"}
           </p>
           {viewing.note && <p className="mt-1 whitespace-pre-line text-sm">{viewing.note}</p>}
           <Button
@@ -148,31 +148,52 @@ export function PhotosCard({ today }: { today: string }) {
   );
 }
 
-// Comparador: dos fotos lado a lado con los días transcurridos y la diferencia de peso.
-function Compare({ photos, weightOf }: { photos: Photo[]; weightOf: (p: Photo) => number | null }) {
-  const chrono = useMemo(() => [...photos].reverse(), [photos]); // de la más antigua a la más reciente
-  const [beforeId, setBeforeId] = useState(chrono[0].id);
-  const [afterId, setAfterId] = useState(chrono[chrono.length - 1].id);
-  const before = photos.find((p) => p.id === beforeId) ?? chrono[0];
-  const after = photos.find((p) => p.id === afterId) ?? chrono[chrono.length - 1];
-  const wb = weightOf(before), wa = weightOf(after);
-  const days = daysBetween(before.taken_on, after.taken_on);
+
+// Comparador: dos fechas lado a lado en la vista elegida, con los días transcurridos y la diferencia de peso.
+function Compare({ photos, weightOn }: { photos: Photo[]; weightOn: (date: string) => number | null }) {
+  const dates = useMemo(() => groupByDate(photos).map((g) => g.date).reverse(), [photos]); // de la más antigua a la más reciente
+  const [before, setBefore] = useState(dates[0]);
+  const [after, setAfter] = useState(dates[dates.length - 1]);
+  const [view, setView] = useState<PhotoView>("front");
+  const wb = weightOn(before), wa = weightOn(after);
+  const days = daysBetween(before, after);
 
   return (
     <div className="mt-5 border-t border-border pt-4">
       <h3 className="mb-2 text-sm font-semibold text-subtle">Comparar</h3>
-      <div className="grid grid-cols-2 gap-2">
-        {([["Antes", before, setBeforeId], ["Después", after, setAfterId]] as const).map(([label, p, set]) => (
-          <div key={label}>
-            <Field label={label}>
-              <select className={`${inputCls} h-11 text-sm`} value={p.id} onChange={(e) => set(e.target.value)}>
-                {chrono.map((c) => <option key={c.id} value={c.id}>{c.taken_on}</option>)}
-              </select>
-            </Field>
-            {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal */}
-            <img src={p.url} alt={`${label}: ${p.taken_on}`} className="mt-2 aspect-[3/4] w-full rounded-2xl object-cover" />
-          </div>
+      <div role="group" aria-label="Vista" className="mb-3 flex rounded-full bg-muted p-0.5 text-sm font-semibold">
+        {PHOTO_VIEWS.map((v) => (
+          <button
+            key={v.id}
+            onClick={() => setView(v.id)}
+            aria-pressed={view === v.id}
+            className={`flex-1 rounded-full py-2 transition ${view === v.id ? "bg-card shadow-sm" : "text-subtle"}`}
+          >
+            {v.label}
+          </button>
         ))}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {([["Antes", before, setBefore], ["Después", after, setAfter]] as const).map(([label, date, set]) => {
+          const p = photos.find((c) => c.taken_on === date && c.view === view);
+          return (
+            <div key={label}>
+              <Field label={label}>
+                <select className={`${inputCls} h-11 text-sm`} value={date} onChange={(e) => set(e.target.value)}>
+                  {dates.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </Field>
+              {p ? (
+                // eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal
+                <img src={p.url} alt={`${label}: ${date}`} className="mt-2 aspect-[3/4] w-full rounded-2xl object-cover" />
+              ) : (
+                <div className="mt-2 flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-dashed border-border px-2 text-center text-xs text-subtle">
+                  Sin foto de {PHOTO_VIEWS.find((v) => v.id === view)?.label.toLowerCase()} este día
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       <p className="mt-3 rounded-2xl bg-muted px-4 py-3 text-sm">
         {days === 0 ? "Misma fecha" : `${Math.abs(days)} días de diferencia`}
@@ -183,18 +204,18 @@ function Compare({ photos, weightOf }: { photos: Photo[]; weightOf: (p: Photo) =
   );
 }
 
-// Evolución foto a foto: peso y cambio respecto a la foto anterior.
-function Evolution({ photos, weightOf }: { photos: Photo[]; weightOf: (p: Photo) => number | null }) {
-  const chrono = [...photos].reverse();
+// Evolución por fecha: peso y cambio respecto a la sesión de fotos anterior.
+function Evolution({ photos, weightOn }: { photos: Photo[]; weightOn: (date: string) => number | null }) {
+  const dates = groupByDate(photos).map((g) => g.date).reverse();
   return (
     <div className="mt-5 border-t border-border pt-4">
       <h3 className="mb-1 text-sm font-semibold text-subtle">Evolución</h3>
       <ul className="text-sm">
-        {chrono.map((p, i) => {
-          const w = weightOf(p), prev = i > 0 ? chrono[i - 1] : null, pw = prev ? weightOf(prev) : null;
+        {dates.map((d, i) => {
+          const w = weightOn(d), prev = i > 0 ? dates[i - 1] : null, pw = prev ? weightOn(prev) : null;
           return (
-            <li key={p.id} className="flex items-center gap-3 border-t border-border py-2 first:border-t-0">
-              <span className="flex-1">{p.taken_on}{prev && <span className="text-subtle"> · +{daysBetween(prev.taken_on, p.taken_on)} d</span>}</span>
+            <li key={d} className="flex items-center gap-3 border-t border-border py-2 first:border-t-0">
+              <span className="flex-1">{d}{prev && <span className="text-subtle"> · +{daysBetween(prev, d)} d</span>}</span>
               <span className="font-medium">{w !== null ? `${nf(w)} kg` : "—"}</span>
               <span className="w-16 text-right text-subtle">{w !== null && pw !== null ? `${signed(w - pw)} kg` : ""}</span>
             </li>
@@ -205,46 +226,102 @@ function Evolution({ photos, weightOf }: { photos: Photo[]; weightOf: (p: Photo)
   );
 }
 
-// Vista previa + fecha y nota; al guardar se comprime y se sube.
-function AddPhotoSheet({ file, today, onClose, onSaved }: { file: File; today: string; onClose: () => void; onSaved: () => Promise<void> }) {
-  // La URL se libera explícitamente al cerrar/guardar: revocarla en la limpieza de un efecto la rompería
-  // en desarrollo (React ejecuta los efectos dos veces) antes de llegar a pintarse.
-  const [preview] = useState(() => URL.createObjectURL(file));
-  const close = () => {
-    URL.revokeObjectURL(preview);
-    onClose();
-  };
+type Picked = { file: File; preview: string };
+
+// Un hueco (frente, lado o espalda): elige o cambia la foto y muestra su vista previa.
+function Slot({ label, picked, onPick }: { label: string; picked?: Picked; onPick: (f: File) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-label={`Elegir foto de ${label.toLowerCase()}`}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = ""; // permite elegir la misma foto otra vez
+          if (f) onPick(f);
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        className="relative flex aspect-[3/4] w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border border-dashed border-border bg-muted text-xs text-subtle"
+      >
+        {picked ? (
+          // eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:)
+          <img src={picked.preview} alt={`Vista previa: ${label}`} className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <Camera size={22} />
+        )}
+        <span className={picked ? "absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-white" : ""}>{label}</span>
+      </button>
+    </div>
+  );
+}
+
+// Tres huecos (frente, lado, espalda) + fecha y nota; al guardar se comprimen y se suben las elegidas.
+function AddPhotosSheet({ today, onClose, onSaved }: { today: string; onClose: () => void; onSaved: () => Promise<void> }) {
+  // Las URLs de vista previa se liberan explícitamente al cambiar de foto, cerrar o guardar: revocarlas en la
+  // limpieza de un efecto las rompería en desarrollo (React ejecuta los efectos dos veces) antes de pintarse.
+  const [picked, setPicked] = useState<Partial<Record<PhotoView, Picked>>>({});
   const [date, setDate] = useState(today);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const count = Object.keys(picked).length;
 
+  const revokeAll = () => Object.values(picked).forEach((p) => URL.revokeObjectURL(p.preview));
+  const close = () => {
+    revokeAll();
+    onClose();
+  };
+
+  function pick(view: PhotoView, file: File) {
+    const old = picked[view];
+    if (old) URL.revokeObjectURL(old.preview);
+    setPicked((cur) => ({ ...cur, [view]: { file, preview: URL.createObjectURL(file) } }));
+  }
+
+  // Sube una a una; si alguna falla se queda abierto para reintentar (repetir una vista del mismo día la sustituye).
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      const blob = await resizeImage(file);
-      await uploadPhoto(createClient(), await currentUserId(), blob, date, note.trim() || null);
-      URL.revokeObjectURL(preview);
+      const sb = createClient();
+      const userId = await currentUserId();
+      for (const v of PHOTO_VIEWS) {
+        const p = picked[v.id];
+        if (p) await uploadPhoto(sb, userId, await resizeImage(p.file), date, v.id, note.trim() || null);
+      }
+      revokeAll();
       await onSaved();
     } catch {
-      setError("No se pudo guardar la foto. Comprueba la conexión e inténtalo de nuevo.");
+      setError("No se pudieron guardar todas las fotos. Comprueba la conexión e inténtalo de nuevo.");
       setBusy(false);
     }
   }
 
   return (
-    <Sheet title="Nueva foto" onClose={close} error={error}>
+    <Sheet title="Nuevas fotos" onClose={close} error={error}>
       <div className="flex flex-col gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) */}
-        <img src={preview} alt="Vista previa" className="max-h-[45dvh] w-full rounded-2xl object-contain" />
+        <div className="grid grid-cols-3 gap-2">
+          {PHOTO_VIEWS.map((v) => (
+            <Slot key={v.id} label={v.label} picked={picked[v.id]} onPick={(f) => pick(v.id, f)} />
+          ))}
+        </div>
+        <p className="-mt-2 text-xs text-subtle">No hace falta subir las tres: elige las que quieras.</p>
         <Field label="Fecha">
           <input type="date" className={inputCls} value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} />
         </Field>
         <Field label="Nota (opcional)">
           <input className={inputCls} value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} placeholder="Ej. en ayunas, misma luz" />
         </Field>
-        <Button onClick={save} disabled={busy}>{busy ? "Subiendo…" : "Guardar foto"}</Button>
+        <Button onClick={save} disabled={busy || count === 0}>
+          {busy ? "Subiendo…" : count === 0 ? "Elige al menos una foto" : count === 1 ? "Guardar 1 foto" : `Guardar ${count} fotos`}
+        </Button>
       </div>
     </Sheet>
   );

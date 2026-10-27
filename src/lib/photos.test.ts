@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { daysBetween, fitWithin, nearestWeight, nextPhotoInfo } from "./photos.ts";
+import { daysBetween, fitWithin, groupByDate, nearestWeight, nextPhotoInfo } from "./photos.ts";
+
+test("groupByDate agrupa por fecha conservando el orden", () => {
+  const items = [
+    { taken_on: "2026-10-20", id: "a" },
+    { taken_on: "2026-10-20", id: "b" },
+    { taken_on: "2026-10-05", id: "c" },
+  ];
+  const groups = groupByDate(items);
+  assert.deepEqual(groups.map((g) => [g.date, g.items.map((i) => i.id)]), [["2026-10-20", ["a", "b"]], ["2026-10-05", ["c"]]]);
+  assert.deepEqual(groupByDate([]), []);
+});
 
 test("daysBetween cruza mes y año", () => {
   assert.equal(daysBetween("2026-01-30", "2026-02-02"), 3);

@@ -1,15 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PhotoView } from "@/lib/photos";
 
 const BUCKET = "progress-photos";
 const URL_TTL = 60 * 60; // las URLs firmadas caducan a la hora (el bucket es privado)
 
-export type Photo = { id: string; taken_on: string; path: string; note: string | null; url: string };
+export type Photo = { id: string; taken_on: string; path: string; note: string | null; view: PhotoView; url: string };
 
 // Fotos del usuario (de la más reciente a la más antigua) con una URL firmada para mostrarlas.
 export async function listPhotos(sb: SupabaseClient): Promise<Photo[]> {
   const { data, error } = await sb
     .from("progress_photos")
-    .select("id, taken_on, path, note")
+    .select("id, taken_on, path, note, view")
     .order("taken_on", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -24,14 +25,21 @@ export async function listPhotos(sb: SupabaseClient): Promise<Photo[]> {
 }
 
 // Sube la imagen a la carpeta del usuario y registra la foto. Si falla el registro se borra el fichero.
-export async function uploadPhoto(sb: SupabaseClient, userId: string, blob: Blob, takenOn: string, note: string | null) {
+// Si ese día ya había una foto de la misma vista, la nueva la sustituye (una por vista y día).
+export async function uploadPhoto(sb: SupabaseClient, userId: string, blob: Blob, takenOn: string, view: PhotoView, note: string | null) {
   const path = `${userId}/${crypto.randomUUID()}.jpg`;
   const up = await sb.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg" });
   if (up.error) throw up.error;
-  const ins = await sb.from("progress_photos").insert({ user_id: userId, taken_on: takenOn, path, note });
+  const old = await sb.from("progress_photos").select("id, path").eq("taken_on", takenOn).eq("view", view);
+  const ins = await sb.from("progress_photos").insert({ user_id: userId, taken_on: takenOn, path, note, view });
   if (ins.error) {
     await sb.storage.from(BUCKET).remove([path]);
     throw ins.error;
+  }
+  // Limpieza de la foto sustituida; si falla, queda una foto repetida que se puede borrar a mano.
+  if (old.data?.length) {
+    await sb.from("progress_photos").delete().in("id", old.data.map((r) => r.id as string));
+    await sb.storage.from(BUCKET).remove(old.data.map((r) => r.path as string));
   }
 }
 

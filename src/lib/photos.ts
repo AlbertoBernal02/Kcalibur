@@ -1,5 +1,25 @@
 import { addDays } from "./meals.ts";
 
+export type PhotoView = "front" | "side" | "back";
+
+// Vistas del cuerpo en el orden en que se muestran.
+export const PHOTO_VIEWS: { id: PhotoView; label: string }[] = [
+  { id: "front", label: "Frente" },
+  { id: "side", label: "Lado" },
+  { id: "back", label: "Espalda" },
+];
+
+// Agrupa elementos por fecha conservando el orden de entrada (los grupos salen en el orden en que aparece cada fecha).
+export function groupByDate<T extends { taken_on: string }>(items: T[]): { date: string; items: T[] }[] {
+  const groups: { date: string; items: T[] }[] = [];
+  for (const item of items) {
+    const last = groups.find((g) => g.date === item.taken_on);
+    if (last) last.items.push(item);
+    else groups.push({ date: item.taken_on, items: [item] });
+  }
+  return groups;
+}
+
 // Días entre dos fechas "YYYY-MM-DD" (b - a).
 export function daysBetween(a: string, b: string): number {
   const d = (s: string) => {
