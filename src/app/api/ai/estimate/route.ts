@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai/call";
 import { ESTIMATE_PROMPT, parseEstimate } from "@/lib/ai/estimate";
 import { getAiConfig } from "@/lib/ai/provider";
 import { createRateLimiter } from "@/lib/ai/request";
@@ -36,21 +37,18 @@ export async function POST(request: Request) {
 
   let upstream: Response;
   try {
-    upstream = await fetch(`${cfg.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}) },
-      body: JSON.stringify({
-        model: cfg.model,
+    upstream = await aiFetch(
+      cfg,
+      {
         messages: [
           { role: "system", content: ESTIMATE_PROMPT },
           { role: "user", content: `<comida>\n${text}\n</comida>` },
         ],
         max_tokens: 900,
         temperature: 0.2,
-        ...cfg.extraBody,
-      }),
-      signal: AbortSignal.any([request.signal, AbortSignal.timeout(45_000)]),
-    });
+      },
+      { signal: request.signal, timeoutMs: 45_000, log: console.warn },
+    );
   } catch {
     return json({ error: "No se pudo conectar con el servicio de IA." }, 502);
   }

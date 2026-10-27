@@ -1,4 +1,5 @@
 import { buildContext } from "@/lib/ai/context";
+import { aiFetch } from "@/lib/ai/call";
 import { loadAiData } from "@/lib/ai/load-context";
 import { getAiConfig } from "@/lib/ai/provider";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
@@ -43,19 +44,16 @@ export async function POST(request: Request) {
   // devolver un error HTTP normal si el proveedor falla.
   let upstream: Response;
   try {
-    upstream = await fetch(`${cfg.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}) },
-      body: JSON.stringify({
-        model: cfg.model,
+    upstream = await aiFetch(
+      cfg,
+      {
         messages: [{ role: "system", content: `${SYSTEM_PROMPT}\n\n<datos_usuario>\n${context}\n</datos_usuario>` }, ...parsed.messages],
         stream: true,
         max_tokens: 1200,
         temperature: 0.4,
-        ...cfg.extraBody,
-      }),
-      signal: AbortSignal.any([request.signal, AbortSignal.timeout(50_000)]),
-    });
+      },
+      { signal: request.signal, timeoutMs: 50_000, log: console.warn },
+    );
   } catch {
     return json({ error: "No se pudo conectar con el servicio de IA." }, 502);
   }
