@@ -71,3 +71,14 @@ test("aiFetch: si fallan los dos devuelve el último error", async () => {
   assert.equal((await run(f)).status, 503);
   assert.equal(f.models.length, 2);
 });
+
+test("aiFetch: fallbackWhen permite no usar la reserva con un límite (429)", async () => {
+  const f = fakeFetch(429, 200);
+  const res = await aiFetch(cfg, { messages: [] }, { timeoutMs: 1000, fetchImpl: f.impl, fallbackWhen: (s) => s !== 429 && shouldFallback(s) });
+  assert.equal(res.status, 429);
+  assert.equal(f.models.length, 1);
+  const g = fakeFetch(404, 200);
+  const ok = await aiFetch(cfg, { messages: [] }, { timeoutMs: 1000, fetchImpl: g.impl, fallbackWhen: (s) => s !== 429 && shouldFallback(s) });
+  assert.equal(ok.status, 200);
+  assert.equal(g.models.length, 2);
+});

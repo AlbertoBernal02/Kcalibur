@@ -4,7 +4,11 @@ import type { AiConfig } from "./provider.ts";
 // ¿Merece la pena probar el modelo de reserva con este fallo? No con 401/403 (la clave es mala y fallaría igual).
 export const shouldFallback = (status: number) => [400, 404, 429, 500, 502, 503, 504].includes(status);
 
-type Opts = { signal?: AbortSignal; timeoutMs: number; fetchImpl?: typeof fetch; log?: (msg: string) => void };
+type Opts = {
+  signal?: AbortSignal; timeoutMs: number; fetchImpl?: typeof fetch; log?: (msg: string) => void;
+  // Con qué códigos de error se prueba la reserva (por defecto `shouldFallback`).
+  fallbackWhen?: (status: number) => boolean;
+};
 
 // POST a /chat/completions con el modelo principal; si falla de forma recuperable (o no responde), repite con el de reserva.
 // Devuelve la última respuesta (correcta o no) para que quien llama traduzca el error como siempre.
@@ -25,7 +29,7 @@ export async function aiFetch(cfg: AiConfig, body: Record<string, unknown>, opts
     // Si el usuario cancela o no hay reserva, el error sigue su camino.
     if (opts.signal?.aborted || !cfg.fallback) throw e;
   }
-  if (first && (first.ok || !cfg.fallback || !shouldFallback(first.status))) return first;
+  if (first && (first.ok || !cfg.fallback || !(opts.fallbackWhen ?? shouldFallback)(first.status))) return first;
 
   opts.log?.(`IA: el modelo ${cfg.model} falló (${first ? first.status : "sin respuesta"}); se prueba ${cfg.fallback!.model}`);
   return attempt(cfg.fallback!.model, cfg.fallback!.extraBody);

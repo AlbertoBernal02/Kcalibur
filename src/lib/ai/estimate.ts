@@ -24,7 +24,7 @@ const num = (v: unknown, max: number): number | null => {
 };
 
 // Extrae el objeto JSON aunque el modelo lo envuelva en ```json … ``` o añada texto.
-function extractJson(text: string): unknown {
+export function extractJson(text: string): unknown {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start < 0 || end <= start) return null;

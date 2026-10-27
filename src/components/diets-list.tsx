@@ -1,12 +1,13 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createDiet, listDiets, type Diet } from "@/lib/data/diets";
 import { defaultSelection, summarizeDay } from "@/lib/diet";
 import { createClient, currentUserId } from "@/lib/supabase/client";
+import { DietImportSheet } from "@/components/diet-import";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, inputCls } from "@/components/ui";
 
@@ -16,6 +17,7 @@ export function DietsList() {
   const [diets, setDiets] = useState<Diet[] | null>(null);
   const [error, setError] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -41,6 +43,10 @@ export function DietsList() {
   return (
     <>
       {error && <p role="alert" className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">No se pudieron cargar tus dietas.</p>}
+
+      <Button variant="secondary" onClick={() => setImporting(true)} className="mb-3 flex items-center justify-center gap-2">
+        <Sparkles size={18} /> Importar dieta con IA
+      </Button>
 
       {!diets && !error ? (
         <div className="flex flex-col gap-2" aria-label="Cargando dietas">
@@ -84,6 +90,8 @@ export function DietsList() {
       >
         <Plus size={28} />
       </button>
+
+      {importing && <DietImportSheet onClose={() => setImporting(false)} />}
 
       {creating && (
         <Sheet title="Nueva dieta" onClose={() => setCreating(false)} error={formError}>
