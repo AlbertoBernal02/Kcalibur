@@ -1,6 +1,7 @@
 // Traduce los errores habituales de Supabase Auth a mensajes claros en español.
 export function friendlyAuthError(message: string): string {
   if (/invalid login credentials/i.test(message)) return "Email o contraseña incorrectos.";
+  if (/signups? (not allowed|(are )?disabled)|signup.*disabled/i.test(message)) return "El registro está cerrado: esta app es privada.";
   if (/already registered/i.test(message)) return "Ese email ya tiene cuenta. Inicia sesión.";
   if (/password should be at least/i.test(message)) return "La contraseña debe tener al menos 6 caracteres.";
   if (/different from the old password/i.test(message)) return "La nueva contraseña debe ser distinta de la actual.";
