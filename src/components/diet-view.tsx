@@ -8,21 +8,13 @@ import { deleteDiet, getDiet, updateDiet, type Diet } from "@/lib/data/diets";
 import { loadGoals } from "@/lib/data/profile";
 import { addMealToDiary, type SavedMeal } from "@/lib/data/saved-meals";
 import { normalizeSelection, optionsBySlot, summarizeDay, type Selection } from "@/lib/diet";
+import { readSel, selKey } from "@/lib/diet-selection";
 import { MEALS, toISO, type Meal } from "@/lib/meals";
 import { mealTotals } from "@/lib/recipes";
 import { createClient } from "@/lib/supabase/client";
 import { DietBulkAddSheet } from "@/components/diet-bulk-add";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, inputCls } from "@/components/ui";
-
-const selKey = (id: string) => `kcalibur-diet-sel-${id}`;
-const readSel = (id: string): Selection | null => {
-  try {
-    return JSON.parse(localStorage.getItem(selKey(id)) ?? "null");
-  } catch {
-    return null;
-  }
-};
 
 const nf = (n: number) => Math.round(n).toLocaleString("es-ES");
 

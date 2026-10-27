@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { DietsList } from "@/components/diets-list";
 import { SavedMealsList } from "@/components/saved-meals-list";
+import { WeekPlan } from "@/components/week-plan";
 
-type Tab = "comidas" | "dietas";
+type Tab = "comidas" | "dietas" | "semana";
 
 // Pestaña Comidas: comidas guardadas / recetas, y dietas. `initialTab` permite volver directo a las dietas.
 export function ComidasView({ initialTab }: { initialTab: Tab }) {
@@ -12,7 +13,7 @@ export function ComidasView({ initialTab }: { initialTab: Tab }) {
   return (
     <>
       <div className="mb-4 flex rounded-2xl bg-muted p-1" role="tablist" aria-label="Sección">
-        {([["comidas", "Mis comidas"], ["dietas", "Dietas"]] as const).map(([id, label]) => (
+        {([["comidas", "Mis comidas"], ["dietas", "Dietas"], ["semana", "Semana"]] as const).map(([id, label]) => (
           <button
             key={id}
             role="tab"
@@ -24,7 +25,7 @@ export function ComidasView({ initialTab }: { initialTab: Tab }) {
           </button>
         ))}
       </div>
-      {tab === "comidas" ? <SavedMealsList /> : <DietsList />}
+      {tab === "comidas" ? <SavedMealsList /> : tab === "dietas" ? <DietsList /> : <WeekPlan />}
     </>
   );
 }

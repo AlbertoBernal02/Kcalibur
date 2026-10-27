@@ -6,8 +6,8 @@ export default async function ComidasPage({ searchParams }: { searchParams: Prom
   const { tab } = await searchParams;
   return (
     <>
-      <PageHeader title="Comidas" subtitle="Comidas guardadas, recetas y dietas." />
-      <ComidasView initialTab={tab === "dietas" ? "dietas" : "comidas"} />
+      <PageHeader title="Comidas" subtitle="Comidas guardadas, recetas, dietas y plan semanal." />
+      <ComidasView initialTab={tab === "dietas" || tab === "semana" ? tab : "comidas"} />
     </>
   );
 }
