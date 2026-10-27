@@ -25,6 +25,10 @@ export function FoodComparer() {
     listFoods(createClient()).then((r) => setCatalog(r.foods)).catch(() => setCatalog([]));
   }, []);
 
+  // Nombres elegidos (el texto de la pantalla usa estos nombres en vez de "A" y "B").
+  const nameA = a ? foodLabel(a) : "";
+  const nameB = b ? foodLabel(b) : "";
+
   const g = Number(grams.replace(",", "."));
   const valid = Number.isFinite(g) && g > 0;
   const counterpart = a ? findCounterpart(a, catalog) : null;
@@ -42,8 +46,8 @@ export function FoodComparer() {
       <p className="mb-5 text-subtle">Crudo vs cocinado, o cuánto de un alimento equivale a otro.</p>
 
       <div className="flex flex-col gap-3">
-        <FoodSelect label="Alimento A" food={a} onChange={setA} />
-        <Field label="Cantidad de A (g)">
+        <FoodSelect label="Primer alimento" food={a} onChange={setA} />
+        <Field label={a ? `Cantidad de ${nameA} (g)` : "Cantidad (g)"}>
           <input className={inputCls} inputMode="decimal" value={grams} onChange={(e) => setGrams(e.target.value)} />
         </Field>
 
@@ -53,7 +57,7 @@ export function FoodComparer() {
           </button>
         )}
 
-        <FoodSelect label="Alimento B" food={b} onChange={setB} />
+        <FoodSelect label="Segundo alimento" food={b} onChange={setB} />
         {a && b && (
           <button
             onClick={() => {
@@ -62,7 +66,7 @@ export function FoodComparer() {
             }}
             className="flex h-11 items-center justify-center gap-2 text-sm font-medium text-subtle"
           >
-            <ArrowLeftRight size={16} /> Intercambiar A y B
+            <ArrowLeftRight size={16} /> Intercambiar los dos alimentos
           </button>
         )}
       </div>
@@ -81,8 +85,8 @@ export function FoodComparer() {
               <thead>
                 <tr className="text-left text-subtle">
                   <th className="py-1 font-medium" />
-                  <th className="py-1 font-medium">A</th>
-                  <th className="py-1 font-medium">B</th>
+                  <th className="py-1 align-bottom font-medium">{nameA}</th>
+                  <th className="py-1 align-bottom font-medium">{nameB}</th>
                 </tr>
               </thead>
               <tbody>
@@ -95,12 +99,11 @@ export function FoodComparer() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-xs text-subtle">A: {foodLabel(a)} · B: {foodLabel(b)}</p>
           </section>
 
           <section aria-label="Equivalencias" className="flex flex-col gap-2">
             <h2 className="px-1 text-sm font-semibold text-subtle">
-              Para igualar {nf(g, 0)} g de A ({nf(scaleMacros(per100(a), g).kcal, 0)} kcal)…
+              Para igualar {nf(g, 0)} g de {nameA} ({nf(scaleMacros(per100(a), g).kcal, 0)} kcal)…
             </h2>
             {METRICS.map((m) => {
               const eq = equivalentGrams(a, g, b, m.id);
@@ -110,13 +113,13 @@ export function FoodComparer() {
                   <p className="text-sm text-subtle">En {m.label}</p>
                   {eq !== null && at ? (
                     <>
-                      <p className="text-lg font-bold">{nf(eq)} g de B</p>
+                      <p className="text-lg font-bold">{nf(eq)} g de {nameB}</p>
                       <p className="text-xs text-subtle">
                         Con esa cantidad: {nf(at.kcal, 0)} kcal · P {nf(at.protein_g)} · H {nf(at.carbs_g)} · G {nf(at.fat_g)}
                       </p>
                     </>
                   ) : (
-                    <p className="text-sm">B no aporta {m.label}: no hay equivalencia.</p>
+                    <p className="text-sm">{nameB} no aporta {m.label}: no hay equivalencia.</p>
                   )}
                 </div>
               );
