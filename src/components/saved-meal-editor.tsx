@@ -10,6 +10,7 @@ import { MEALS, type Meal } from "@/lib/meals";
 import { mealTotals, perServing } from "@/lib/recipes";
 import { currentUserId, createClient } from "@/lib/supabase/client";
 import { FoodPicker } from "@/components/food-picker";
+import { DishForm } from "@/components/outside-meal";
 import { QuantityForm } from "@/components/quantity-form";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, Section, inputCls } from "@/components/ui";
@@ -127,7 +128,7 @@ export function SavedMealEditor({ id, dietId, dietMeal }: { id?: string; dietId?
                     <button onClick={() => setDialog({ kind: "edit", index: i })} className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3 text-left active:scale-[0.99]">
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{it.name}</span>
-                        <span className="block text-sm text-subtle">{it.grams} g</span>
+                        <span className="block text-sm text-subtle">{it.external ? "Comida fuera" : `${it.grams} g`}</span>
                       </span>
                       <span className="font-semibold">{Math.round(it.kcal)}</span>
                     </button>
@@ -142,7 +143,7 @@ export function SavedMealEditor({ id, dietId, dietMeal }: { id?: string; dietId?
 
           {items.length > 0 && (
             <div className="rounded-3xl bg-card p-4">
-              <p className="text-sm text-subtle">{kind === "recipe" ? "Receta completa" : "Total"} · {Math.round(totals.grams)} g</p>
+              <p className="text-sm text-subtle">{kind === "recipe" ? "Receta completa" : "Total"}{totals.grams - items.filter((i) => i.external).length > 0 && ` · ${Math.round(totals.grams - items.filter((i) => i.external).length)} g`}</p>
               <p className="text-2xl font-bold">{Math.round(totals.kcal)} <span className="text-base font-medium text-subtle">kcal</span></p>
               <p className="text-sm text-subtle">P {Math.round(totals.protein_g)} · H {Math.round(totals.carbs_g)} · G {Math.round(totals.fat_g)}</p>
               {kind === "recipe" && nServings > 0 && (
@@ -183,6 +184,20 @@ export function SavedMealEditor({ id, dietId, dietMeal }: { id?: string; dietId?
 
       {editing && dialog?.kind === "edit" && (
         <Sheet title="Editar alimento" onClose={close}>
+          {editing.external ? (
+            <DishForm
+              initial={editing}
+              submitLabel="Guardar"
+              onSubmit={(d) => {
+                setItems((p) => p.map((x, i) => (i === dialog.index ? { ...x, ...d } : x)));
+                close();
+              }}
+              onDelete={() => {
+                setItems((p) => p.filter((_, i) => i !== dialog.index));
+                close();
+              }}
+            />
+          ) : (
           <QuantityForm
             name={editing.name}
             per100={{
@@ -201,6 +216,7 @@ export function SavedMealEditor({ id, dietId, dietMeal }: { id?: string; dietId?
               close();
             }}
           />
+          )}
         </Sheet>
       )}
     </>

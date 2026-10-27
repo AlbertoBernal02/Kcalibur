@@ -8,7 +8,7 @@ export type AiData = {
   date: string; // hoy, "YYYY-MM-DD" (fecha local del usuario)
   profile: { sex: Sex | null; age: number | null; height_cm: number | null; weight_kg: number | null; activity: Activity | null; goal: Goal | null } | null;
   goals: Goals | null;
-  today: { meal: string; name: string; grams: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number }[];
+  today: { meal: string; name: string; grams: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number; external?: boolean }[];
   days: DayTotals[]; // últimos días con registro
   weights: { date: string; value: number }[];
   diets: { name: string; notes: string | null; options: { meal: string; name: string; kcal: number; protein_g: number; carbs_g: number; fat_g: number; items: string[] }[] }[];
@@ -70,7 +70,7 @@ function sections(d: AiData, withItems: boolean): string[] {
     out.push("Comidas de hoy:");
     for (const m of MEALS) {
       const es = d.today.filter((e) => e.meal === m.id);
-      if (es.length) out.push(`- ${m.label}: ${es.map((e) => `${clean(e.name)} ${r(e.grams)} g (${r(e.kcal)} kcal)`).join("; ")}`);
+      if (es.length) out.push(`- ${m.label}: ${es.map((e) => (e.external ? `${clean(e.name)} (${r(e.kcal)} kcal, comida de fuera estimada)` : `${clean(e.name)} ${r(e.grams)} g (${r(e.kcal)} kcal)`)).join("; ")}`);
     }
   } else out.push("Comidas de hoy: nada registrado todavía.");
 

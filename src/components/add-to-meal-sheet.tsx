@@ -10,6 +10,7 @@ import { MEALS, type Meal } from "@/lib/meals";
 import { mealTotals, perServing, recipePer100, servingGrams } from "@/lib/recipes";
 import { createClient } from "@/lib/supabase/client";
 import { FoodPicker } from "@/components/food-picker";
+import { OutsidePanel } from "@/components/outside-meal";
 import { QuantityForm } from "@/components/quantity-form";
 import { Sheet } from "@/components/sheet";
 import { Button } from "@/components/ui";
@@ -26,7 +27,7 @@ type Props = {
 
 // Hoja para añadir a una comida: un alimento (gramos/raciones) o una comida guardada / receta.
 export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Props) {
-  const [mode, setMode] = useState<"foods" | "saved" | "diet">("foods");
+  const [mode, setMode] = useState<"foods" | "saved" | "diet" | "outside">("foods");
   const [food, setFood] = useState<Food | null>(null);
   const [saved, setSaved] = useState<SavedMeal | null>(null);
   const label = MEALS.find((m) => m.id === meal)!.label;
@@ -44,6 +45,8 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
             name={foodLabel(food)}
             per100={{ kcal: food.kcal_100g, protein_g: food.protein_100g, carbs_g: food.carbs_100g, fat_g: food.fat_100g }}
             servingG={food.serving_g}
+            initialUnit={food.category === "comida_fuera" ? "serving" : undefined}
+            servingNames={food.category === "comida_fuera" ? { one: "Unidad", many: "Unidades" } : undefined}
             submitLabel="Añadir"
             busy={busy}
             onSubmit={(grams, servingG, m) =>
@@ -84,7 +87,7 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex rounded-2xl bg-muted p-1" role="tablist" aria-label="Origen">
-            {([["foods", "Alimentos"], ["saved", "Mis comidas"], ["diet", "Dieta"]] as const).map(([id, text]) => (
+            {([["foods", "Alimentos"], ["saved", "Mis comidas"], ["diet", "Dieta"], ["outside", "Fuera"]] as const).map(([id, text]) => (
               <button
                 key={id}
                 role="tab"
@@ -96,7 +99,7 @@ export function AddToMealSheet({ meal, date, busy, error, onClose, onWrite }: Pr
               </button>
             ))}
           </div>
-          {mode === "foods" ? <FoodPicker onPick={setFood} /> : mode === "saved" ? <SavedMealPicker onPick={setSaved} /> : <DietOptionPicker meal={meal} onPick={setSaved} />}
+          {mode === "foods" ? <FoodPicker onPick={setFood} /> : mode === "saved" ? <SavedMealPicker onPick={setSaved} /> : mode === "diet" ? <DietOptionPicker meal={meal} onPick={setSaved} /> : <OutsidePanel meal={meal} date={date} label={label} busy={busy} onWrite={onWrite} onPickFood={setFood} />}
         </div>
       )}
     </Sheet>
@@ -190,7 +193,7 @@ function SavedMealSummary({ saved, busy, label, onAdd }: { saved: SavedMeal; bus
       <ul className="flex flex-col gap-1.5 rounded-2xl bg-card p-3 text-sm">
         {saved.items.map((it, i) => (
           <li key={i} className="flex justify-between gap-3">
-            <span className="min-w-0 truncate">{it.name} <span className="text-subtle">· {it.grams} g</span></span>
+            <span className="min-w-0 truncate">{it.name} {!it.external && <span className="text-subtle">· {it.grams} g</span>}</span>
             <span className="font-medium">{Math.round(it.kcal)}</span>
           </li>
         ))}

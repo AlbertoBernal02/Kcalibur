@@ -12,6 +12,7 @@ import { getSyncState, subscribeSync } from "@/lib/offline/sync";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { AddToMealSheet } from "@/components/add-to-meal-sheet";
 import { DaySummary } from "@/components/day-summary";
+import { DishForm } from "@/components/outside-meal";
 import { QuantityForm } from "@/components/quantity-form";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, inputCls } from "@/components/ui";
@@ -188,7 +189,7 @@ function DiaryDay({ today }: { today: string }) {
                     <button onClick={() => open({ kind: "edit", entry: e })} className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left active:bg-muted">
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{e.name}</span>
-                        <span className="block text-sm text-subtle">{e.grams} g · P {Math.round(e.protein_g)} · H {Math.round(e.carbs_g)} · G {Math.round(e.fat_g)}</span>
+                        <span className="block text-sm text-subtle">{e.external ? "Fuera" : `${e.grams} g`} · P {Math.round(e.protein_g)} · H {Math.round(e.carbs_g)} · G {Math.round(e.fat_g)}</span>
                       </span>
                       <span className="font-semibold">{Math.round(e.kcal)}</span>
                     </button>
@@ -268,6 +269,16 @@ function EditSheet({ entry, busy, error, onClose, onSave, onDelete }: {
           </select>
         </Field>
       </div>
+      {entry.external ? (
+        // Plato de fuera: se editan directamente las kcal y los macros (no hay gramos).
+        <DishForm
+          initial={entry}
+          submitLabel="Guardar"
+          busy={busy}
+          onSubmit={(d) => onSave({ meal, name: d.name, kcal: d.kcal, protein_g: d.protein_g, carbs_g: d.carbs_g, fat_g: d.fat_g })}
+          onDelete={() => confirm("¿Borrar esta entrada?") && onDelete()}
+        />
+      ) : (
       <QuantityForm
         name={entry.name}
         per100={{ kcal: per(entry.kcal), protein_g: per(entry.protein_g), carbs_g: per(entry.carbs_g), fat_g: per(entry.fat_g) }}
@@ -278,6 +289,7 @@ function EditSheet({ entry, busy, error, onClose, onSave, onDelete }: {
         onSubmit={(grams, servingG, m) => onSave({ meal, grams, serving_g: servingG, ...m })}
         onDelete={() => confirm("¿Borrar esta entrada?") && onDelete()}
       />
+      )}
     </Sheet>
   );
 }

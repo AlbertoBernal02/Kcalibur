@@ -15,7 +15,7 @@ export async function loadAiData(sb: SupabaseClient, date: string, recentTexts: 
   const [profile, goals, entries, days, weights, diets, options, foods] = await Promise.all([
     sb.from("profiles").select("sex, birth_date, height_cm, weight_kg, activity, goal").maybeSingle(),
     sb.from("goals").select("kcal, protein_g, carbs_g, fat_g").maybeSingle(),
-    sb.from("diary_entries").select("meal, name, grams, kcal, protein_g, carbs_g, fat_g").eq("entry_date", date).order("created_at"),
+    sb.from("diary_entries").select("meal, name, grams, kcal, protein_g, carbs_g, fat_g, external").eq("entry_date", date).order("created_at"),
     loadDailyTotals(sb, addDays(date, -13), date).catch(() => []),
     loadWeights(sb, addDays(date, -30)).catch(() => []),
     sb.from("diets").select("id, name, notes").order("created_at"),

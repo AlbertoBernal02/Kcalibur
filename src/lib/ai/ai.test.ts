@@ -26,6 +26,12 @@ test("contexto: incluye objetivos, lo que falta hoy y las dietas", () => {
   assert.match(c, /Tostadas 300 kcal/);
 });
 
+test("contexto: las comidas de fuera se marcan como estimadas y sin gramos", () => {
+  const c = buildContext({ ...base, today: [{ meal: "dinner", name: "Pizza Domino's", grams: 1, kcal: 850, protein_g: 0, carbs_g: 0, fat_g: 0, external: true }] });
+  assert.match(c, /Cena: Pizza Domino's \(850 kcal, comida de fuera estimada\)/);
+  assert.doesNotMatch(c, /Pizza Domino's 1 g/);
+});
+
 test("contexto: sin objetivos ni comidas no inventa datos", () => {
   const c = buildContext({ ...base, goals: null, today: [], days: [], weights: [], diets: [], profile: null });
   assert.match(c, /Objetivos diarios: sin definir/);

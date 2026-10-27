@@ -3,7 +3,7 @@ import { cachedRead } from "@/lib/offline/store";
 
 export type Category =
   | "carne" | "pescado" | "huevos" | "cereales" | "tuberculos" | "legumbres"
-  | "fruta" | "verdura" | "lacteos" | "grasas" | "frutos_secos" | "otros";
+  | "fruta" | "verdura" | "lacteos" | "grasas" | "frutos_secos" | "otros" | "comida_fuera";
 export type FoodState = "raw" | "cooked";
 
 export type Food = {
@@ -38,6 +38,7 @@ export const CATEGORIES: Record<Category, string> = {
   grasas: "Aceites y grasas",
   frutos_secos: "Frutos secos",
   otros: "Otros",
+  comida_fuera: "Comida fuera (por unidades)",
 };
 
 export const STATE_LABEL: Record<FoodState, string> = { raw: "crudo", cooked: "cocinado" };

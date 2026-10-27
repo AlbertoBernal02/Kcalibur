@@ -15,6 +15,7 @@ export type SavedItem = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  external?: boolean; // plato de fuera de casa (ver Entry.external)
 };
 
 // `dietId`/`dietMeal` presentes = es una opción de una dieta (no sale en "Mis comidas").
@@ -23,7 +24,7 @@ export type SavedMeal = {
   dietId: string | null; dietMeal: Meal | null; items: SavedItem[];
 };
 
-const ITEM_COLS = "food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g";
+const ITEM_COLS = "food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g, external";
 export const MEAL_SELECT = `id, name, kind, servings, diet_id, diet_meal, saved_meal_items(${ITEM_COLS}, position)`;
 
 export type Row = {
@@ -34,7 +35,7 @@ export type Row = {
 // Solo los campos de SavedItem: `position` no debe filtrarse (se reutilizan los elementos en inserts al diario).
 const toItem = (r: SavedItem): SavedItem => ({
   food_id: r.food_id, name: r.name, grams: r.grams, serving_g: r.serving_g,
-  kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g,
+  kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, external: r.external,
 });
 
 export const fromRow = (r: Row): SavedMeal => ({
@@ -105,8 +106,8 @@ export async function deleteSavedMeal(sb: SupabaseClient, id: string) {
 
 // Convierte entradas del diario en elementos de una comida guardada.
 export const entriesToItems = (entries: Entry[]): SavedItem[] =>
-  entries.map(({ food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g }) => ({
-    food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g,
+  entries.map(({ food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g, external }) => ({
+    food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g, external,
   }));
 
 // Añade todos los elementos de una comida guardada al diario (una entrada por elemento; funciona offline).

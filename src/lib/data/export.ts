@@ -23,20 +23,21 @@ export type ExportResult = { csv: string; rows: number };
 
 const mealLabel = (id: string) => MEALS.find((m) => m.id === id)?.label ?? id;
 
-type DiaryRow = { entry_date: string; meal: string; name: string; grams: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+type DiaryRow = { entry_date: string; meal: string; name: string; grams: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number; external: boolean };
 
 export async function exportDiary(sb: SupabaseClient): Promise<ExportResult> {
-  const rows = await fetchAll<DiaryRow>(sb, "diary_entries", "entry_date, meal, name, grams, kcal, protein_g, carbs_g, fat_g", ["entry_date", "created_at", "id"]);
+  const rows = await fetchAll<DiaryRow>(sb, "diary_entries", "entry_date, meal, name, grams, kcal, protein_g, carbs_g, fat_g, external", ["entry_date", "created_at", "id"]);
   const csv = toCsv<DiaryRow>(
     [
       { header: "fecha", value: (r) => r.entry_date },
       { header: "comida", value: (r) => mealLabel(r.meal) },
       { header: "alimento", value: (r) => r.name },
-      { header: "gramos", value: (r) => Number(r.grams) },
+      { header: "gramos", value: (r) => (r.external ? null : Number(r.grams)) }, // un plato de fuera no tiene gramos
       { header: "kcal", value: (r) => Number(r.kcal) },
       { header: "proteina_g", value: (r) => Number(r.protein_g) },
       { header: "hidratos_g", value: (r) => Number(r.carbs_g) },
       { header: "grasa_g", value: (r) => Number(r.fat_g) },
+      { header: "fuera", value: (r) => (r.external ? "sí" : "") },
     ],
     rows,
   );

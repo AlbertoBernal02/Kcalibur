@@ -17,9 +17,10 @@ export type Entry = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  external?: boolean; // comida de fuera de casa (estimada): kcal/macros directos, grams = 1 (un plato)
 };
 
-const COLS = "id, entry_date, meal, food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g";
+const COLS = "id, entry_date, meal, food_id, name, grams, serving_g, kcal, protein_g, carbs_g, fat_g, external";
 
 // Entradas de un día: servidor (o, sin conexión, la última copia guardada) + cambios aún sin sincronizar.
 export async function loadDay(sb: SupabaseClient, date: string): Promise<Entry[]> {
@@ -74,7 +75,7 @@ export async function copyEntries(sb: SupabaseClient, entries: Entry[], date: st
     sb,
     entries.map((e) => ({
       entry_date: date, meal: meal ?? e.meal, food_id: e.food_id, name: e.name, grams: e.grams,
-      serving_g: e.serving_g, kcal: e.kcal, protein_g: e.protein_g, carbs_g: e.carbs_g, fat_g: e.fat_g,
+      serving_g: e.serving_g, kcal: e.kcal, protein_g: e.protein_g, carbs_g: e.carbs_g, fat_g: e.fat_g, external: e.external,
     })),
   );
 }

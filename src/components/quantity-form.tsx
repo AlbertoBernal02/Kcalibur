@@ -10,6 +10,7 @@ type Props = {
   servingG: number | null;
   initialGrams?: number;
   initialUnit?: "g" | "serving"; // "serving" empieza en 1 ración (recetas)
+  servingNames?: { one: string; many: string }; // por defecto Ración/Raciones (comida fuera: Unidad/Unidades)
   submitLabel: string;
   onSubmit: (grams: number, servingG: number | null, macros: Per100) => void;
   busy?: boolean;
@@ -17,7 +18,8 @@ type Props = {
 };
 
 // Cantidad por gramos o raciones con macros calculados en vivo.
-export function QuantityForm({ name, per100, servingG, initialGrams, initialUnit, submitLabel, onSubmit, busy, onDelete }: Props) {
+export function QuantityForm({ name, per100, servingG, initialGrams, initialUnit, servingNames, submitLabel, onSubmit, busy, onDelete }: Props) {
+  const names = servingNames ?? { one: "Ración", many: "Raciones" };
   const startInServings = initialUnit === "serving" && !!servingG;
   const [unit, setUnit] = useState<"g" | "serving">(startInServings ? "serving" : "g");
   const [amount, setAmount] = useState(
@@ -46,13 +48,13 @@ export function QuantityForm({ name, per100, servingG, initialGrams, initialUnit
     >
       <p className="text-lg font-semibold">{name}</p>
       <div className="grid grid-cols-2 gap-3">
-        <Field label={unit === "g" ? "Cantidad (g)" : "Raciones"}>
+        <Field label={unit === "g" ? "Cantidad (g)" : names.many}>
           <input className={inputCls} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
         </Field>
         <Field label="Unidad">
           <select className={inputCls} value={unit} onChange={(e) => changeUnit(e.target.value as "g" | "serving")}>
             <option value="g">Gramos</option>
-            {servingG && <option value="serving">Ración ({servingG} g)</option>}
+            {servingG && <option value="serving">{names.one} ({servingG} g)</option>}
           </select>
         </Field>
       </div>
