@@ -14,9 +14,10 @@ export function getAiConfig(env: Record<string, string | undefined>): AiConfig |
   const local = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(baseUrl);
   if (!apiKey && !local) return null;
 
-  // Qwen 3 "piensa" por defecto: en Groq se apaga para respuestas rápidas y baratas en tokens.
-  // Con otro proveedor solo se envía si se pide expresamente (un parámetro desconocido podría rechazarse).
-  const effort = env.AI_REASONING_EFFORT || (env.AI_BASE_URL ? undefined : "none");
+  // Qwen 3 en Groq: razonamiento "low" (oculto). Con "none" responde "pensando en voz alta" y falla en las
+  // cuentas de seguimiento; con "low" acierta y sigue tardando ~2 s. Con otro proveedor solo se envía si se
+  // pide expresamente (un parámetro desconocido podría rechazarse).
+  const effort = env.AI_REASONING_EFFORT || (env.AI_BASE_URL ? undefined : "low");
   return {
     baseUrl,
     apiKey,

@@ -1,3 +1,4 @@
+import { buildEquivalenceHints } from "../equivalences.ts";
 import { MEALS } from "../meals.ts";
 import { ACTIVITY, GOAL, type Activity, type Goal, type Goals, type Sex } from "../nutrition.ts";
 import type { DayTotals } from "../stats.ts";
@@ -86,6 +87,10 @@ function sections(d: AiData, withItems: boolean): string[] {
         d.reference.map((f) => `${clean(f.name)}${f.state ? st[f.state] : ""} ${r(f.kcal_100g)} kcal (P ${f.protein_100g}, H ${f.carbs_100g}, G ${f.fat_100g})`).join("; "),
     );
   }
+
+  // Conversiones crudo<->cocinado y equivalencias entre alimentos mencionados, calculadas aquí (no por el modelo).
+  const hints = d.reference?.length ? buildEquivalenceHints(d.reference) : [];
+  if (hints.length) out.push("Equivalencias ya calculadas con esos valores (úsalas tal cual y escala linealmente):", ...hints.map((h) => `- ${h}`));
 
   if (d.diets.length) {
     out.push("Dietas guardadas (opciones por comida; las kcal y macros de cada opción son los de la PRIMERA alternativa de cada alimento, y lo que va entre paréntesis son alternativas que pueden cambiar las kcal):");

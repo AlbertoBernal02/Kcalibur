@@ -8,11 +8,12 @@ test("proveedor: sin clave no está configurado (salvo servidor local)", () => {
   assert.ok(getAiConfig({ AI_BASE_URL: "http://localhost:11434/v1", AI_MODEL: "qwen3:8b" }));
 });
 
-test("proveedor: por defecto Groq + Qwen con razonamiento apagado", () => {
+test("proveedor: por defecto Groq + Qwen con razonamiento bajo y oculto", () => {
   const c = getAiConfig({ AI_API_KEY: "k" })!;
   assert.equal(c.baseUrl, "https://api.groq.com/openai/v1");
   assert.equal(c.model, "qwen/qwen3.8-27b");
-  assert.deepEqual(c.extraBody, { reasoning_effort: "none" });
+  assert.deepEqual(c.extraBody, { reasoning_effort: "low", reasoning_format: "hidden" });
+  assert.deepEqual(getAiConfig({ AI_API_KEY: "k", AI_REASONING_EFFORT: "none" })!.extraBody, { reasoning_effort: "none" });
 });
 
 test("proveedor: con otro proveedor no se envían parámetros desconocidos", () => {

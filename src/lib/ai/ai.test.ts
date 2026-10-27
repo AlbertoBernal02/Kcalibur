@@ -50,6 +50,17 @@ test("referencia: se incluye en el contexto con sus valores", () => {
   assert.match(c, /Valores de referencia por 100 g.*Patata cocinado 86 kcal \(P 1\.9, H 20, G 0\.1\)/);
 });
 
+test("contexto: incluye las equivalencias ya calculadas de los alimentos mencionados", () => {
+  const ref = [
+    { name: "Arroz blanco", state: "raw" as const, kcal_100g: 360, protein_100g: 7, carbs_100g: 79, fat_100g: 0.6 },
+    { name: "Arroz blanco", state: "cooked" as const, kcal_100g: 130, protein_100g: 2.7, carbs_100g: 28, fat_100g: 0.3 },
+  ];
+  const c = buildContext({ ...base, reference: ref });
+  assert.match(c, /Equivalencias ya calculadas/);
+  assert.match(c, /Arroz blanco: 100 g crudo ≈ 276\.9 g cocinado/);
+  assert.ok(!/Equivalencias ya calculadas/.test(buildContext({ ...base, reference: [] })));
+});
+
 test("contexto: un perfil vacío se indica como sin datos", () => {
   const empty = { sex: null, age: null, height_cm: null, weight_kg: null, activity: null, goal: null };
   assert.match(buildContext({ ...base, profile: empty }), /Perfil: sin datos\./);
