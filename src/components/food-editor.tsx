@@ -1,14 +1,18 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ScanBarcode } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
-  CATEGORIES, deleteFood, getFood, saveFood, STATE_LABEL,
+  CATEGORIES, deleteFood, findByBarcode, getFood, saveFood, STATE_LABEL,
   type Category, type Food, type FoodInput, type FoodState,
 } from "@/lib/data/foods";
+import { lookupOffProduct } from "@/lib/data/off-foods";
+import { isComplete, offPrefill } from "@/lib/off";
 import { createClient } from "@/lib/supabase/client";
+import { BarcodeScanner } from "@/components/barcode-scanner";
 import { Button, Field, inputCls } from "@/components/ui";
 
 type Form = {
@@ -20,6 +24,13 @@ const EMPTY: Form = {
   name: "", brand: "", barcode: "", category: "otros", state: "",
   kcal: "", protein: "", carbs: "", fat: "", serving: "",
 };
+
+// Estado de la búsqueda por código de barras del formulario de alimento nuevo.
+type Lookup =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "found" | "incomplete" | "notfound" | "error" }
+  | { kind: "exists"; food: Food };
 
 const num = (s: string) => (s.trim() === "" ? NaN : Number(s.replace(",", ".")));
 
@@ -40,6 +51,8 @@ export function FoodEditor({ id, prefill }: { id?: string; prefill?: Prefill }) 
   const [loading, setLoading] = useState(!!id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lookup, setLookup] = useState<Lookup>({ kind: "idle" });
+  const [scanning, setScanning] = useState(false);
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
 
@@ -56,6 +69,24 @@ export function FoodEditor({ id, prefill }: { id?: string; prefill?: Prefill }) 
   }, [id]);
 
   const readOnly = !!food && food.user_id === null;
+
+  // Con el código (escaneado o escrito): si ya lo tienes lo dice; si no, rellena el resto desde Open Food Facts.
+  async function fetchByCode(raw: string) {
+    const code = raw.trim();
+    setF((p) => ({ ...p, barcode: code }));
+    if (!/^\d{6,14}$/.test(code)) return setLookup({ kind: "error" });
+    setLookup({ kind: "loading" });
+    try {
+      const own = await findByBarcode(createClient(), code);
+      if (own) return setLookup({ kind: "exists", food: own });
+      const product = await lookupOffProduct(code);
+      if (!product) return setLookup({ kind: "notfound" });
+      setF((p) => ({ ...p, ...offPrefill(product) }));
+      setLookup({ kind: isComplete(product) ? "found" : "incomplete" });
+    } catch {
+      setLookup({ kind: "error" });
+    }
+  }
 
   // Valida el formulario y lo convierte al formato de la BD (o devuelve el error).
   function parse(): FoodInput | string {
@@ -152,6 +183,58 @@ export function FoodEditor({ id, prefill }: { id?: string; prefill?: Prefill }) 
               Open Food Facts no tiene todos los datos de este producto. Completa los valores que faltan (mira la etiqueta).
             </p>
           )}
+          {!id && (
+            <section aria-label="Buscar por código de barras" className="flex flex-col gap-3 rounded-3xl bg-card p-4">
+              <div className="flex flex-col gap-1.5 text-sm font-medium">
+                <label htmlFor="barcode-first">Código de barras</label>
+                <div className="flex gap-2">
+                  <input
+                    id="barcode-first"
+                    className={inputCls}
+                    inputMode="numeric"
+                    value={f.barcode}
+                    onChange={(e) => {
+                      set("barcode")(e);
+                      setLookup({ kind: "idle" });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void fetchByCode(f.barcode);
+                      }
+                    }}
+                    placeholder="Escanea o escribe el código"
+                    disabled={busy}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanning(true)}
+                    aria-label="Escanear código de barras"
+                    disabled={busy}
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-fg active:scale-95"
+                  >
+                    <ScanBarcode size={26} />
+                  </button>
+                </div>
+              </div>
+              <Button type="button" variant="secondary" onClick={() => fetchByCode(f.barcode)} disabled={busy || lookup.kind === "loading" || !f.barcode.trim()}>
+                {lookup.kind === "loading" ? "Buscando…" : "Buscar datos del producto"}
+              </Button>
+              <LookupMessage lookup={lookup} />
+            </section>
+          )}
+          {scanning &&
+            // Portal a <body>: un ancestro con backdrop-filter rompería el position:fixed del escáner.
+            createPortal(
+              <BarcodeScanner
+                onClose={() => setScanning(false)}
+                onCode={(code) => {
+                  setScanning(false);
+                  void fetchByCode(code);
+                }}
+              />,
+              document.body,
+            )}
           <Field label="Nombre">
             <input className={inputCls} value={f.name} onChange={set("name")} disabled={dis} maxLength={120} />
           </Field>
@@ -199,9 +282,11 @@ export function FoodEditor({ id, prefill }: { id?: string; prefill?: Prefill }) 
             <Field label="Ración (g, opcional)">
               <input className={inputCls} inputMode="decimal" value={f.serving} onChange={set("serving")} disabled={dis} />
             </Field>
-            <Field label="Código de barras">
-              <input className={inputCls} inputMode="numeric" value={f.barcode} onChange={set("barcode")} disabled={dis} />
-            </Field>
+            {id && (
+              <Field label="Código de barras">
+                <input className={inputCls} inputMode="numeric" value={f.barcode} onChange={set("barcode")} disabled={dis} />
+              </Field>
+            )}
           </div>
 
           {error && <p role="alert" className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
@@ -221,5 +306,29 @@ export function FoodEditor({ id, prefill }: { id?: string; prefill?: Prefill }) 
         </form>
       )}
     </>
+  );
+}
+
+// Resultado de la búsqueda por código bajo el campo.
+function LookupMessage({ lookup }: { lookup: Lookup }) {
+  if (lookup.kind === "idle" || lookup.kind === "loading") return null;
+  if (lookup.kind === "exists")
+    return (
+      <p role="status" className="rounded-xl bg-carbs/10 px-4 py-3 text-sm text-carbs">
+        Ya tienes este producto: <strong>{lookup.food.name}</strong>.{" "}
+        <Link href={lookup.food.user_id ? `/alimentos/${lookup.food.id}` : "/alimentos"} className="font-semibold underline">Abrirlo</Link>
+      </p>
+    );
+  const text = {
+    found: "✓ Producto encontrado: se han rellenado los datos. Revísalos con la etiqueta y guarda.",
+    incomplete: "Producto encontrado, pero faltan algunos valores: complétalos con la etiqueta.",
+    notfound: "No está en Open Food Facts. Rellena los datos a mano (el código se guardará con el alimento).",
+    error: "No se pudo buscar (comprueba que el código tenga entre 6 y 14 dígitos y que haya conexión).",
+  }[lookup.kind];
+  const ok = lookup.kind === "found";
+  return (
+    <p role={ok ? "status" : "alert"} className={`rounded-xl px-4 py-3 text-sm ${ok ? "bg-primary/10 text-primary" : "bg-muted text-subtle"}`}>
+      {text}
+    </p>
   );
 }

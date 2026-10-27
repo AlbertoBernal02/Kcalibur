@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isComplete, type OffProduct } from "@/lib/off";
+import { isComplete, offPrefill, type OffProduct } from "@/lib/off";
 import { findByBarcode, insertOffFood, type Food } from "@/lib/data/foods";
 
 // Resultado de resolver un código de barras.
@@ -50,13 +50,9 @@ export async function resolveBarcode(sb: SupabaseClient, userId: string, code: s
 }
 
 // Enlace al editor de alimento nuevo con los datos de OFF que sí existen (el usuario completa el resto).
-export function prefillHref(p: OffProduct): string {
-  const q = new URLSearchParams({ name: p.name, barcode: p.code });
-  if (p.brand) q.set("brand", p.brand);
-  if (p.kcal !== null) q.set("kcal", String(p.kcal));
-  if (p.protein !== null) q.set("protein", String(p.protein));
-  if (p.carbs !== null) q.set("carbs", String(p.carbs));
-  if (p.fat !== null) q.set("fat", String(p.fat));
-  if (p.serving_g !== null) q.set("serving", String(p.serving_g));
-  return `/alimentos/nuevo?${q}`;
+export const prefillHref = (p: OffProduct): string => `/alimentos/nuevo?${new URLSearchParams(offPrefill(p))}`;
+
+// Producto de OFF por código, sin guardarlo (para rellenar el formulario de alimento nuevo). null = no existe.
+export async function lookupOffProduct(code: string): Promise<OffProduct | null> {
+  return (await getJson<{ product: OffProduct | null }>(`/api/off/product/${code}`)).product;
 }

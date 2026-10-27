@@ -57,3 +57,15 @@ export function toOffProduct(raw: Record<string, unknown>): OffProduct | null {
     serving_g: serving !== null && serving > 0 && serving <= 2000 ? Math.round(serving * 10) / 10 : null,
   };
 }
+
+// Valores del formulario de alimento (texto) a partir de un producto de OFF; solo los campos que existen.
+export function offPrefill(p: OffProduct): Record<string, string> {
+  const out: Record<string, string> = { name: p.name, barcode: p.code };
+  if (p.brand) out.brand = p.brand;
+  if (p.kcal !== null) out.kcal = String(p.kcal);
+  if (p.protein !== null) out.protein = String(p.protein);
+  if (p.carbs !== null) out.carbs = String(p.carbs);
+  if (p.fat !== null) out.fat = String(p.fat);
+  if (p.serving_g !== null) out.serving = String(p.serving_g);
+  return out;
+}

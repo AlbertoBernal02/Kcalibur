@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isComplete, toOffProduct } from "./off.ts";
+import { isComplete, offPrefill, toOffProduct } from "./off.ts";
 
 test("producto completo (endpoint de producto: brands string, números como string)", () => {
   const p = toOffProduct({
@@ -49,4 +49,11 @@ test("valores fuera de rango se descartan (la BD los rechazaría)", () => {
 test("sin nombre o con código inválido se descarta", () => {
   assert.equal(toOffProduct({ code: "12345678", product_name: "  " }), null);
   assert.equal(toOffProduct({ code: "abc", product_name: "X" }), null);
+});
+
+test("offPrefill devuelve solo los campos que existen, como texto", () => {
+  const full = offPrefill({ code: "8480000123456", name: "Espagueti", brand: "Hacendado", kcal: 358, protein: 12.5, carbs: 71, fat: 1.5, serving_g: 80 });
+  assert.deepEqual(full, { name: "Espagueti", barcode: "8480000123456", brand: "Hacendado", kcal: "358", protein: "12.5", carbs: "71", fat: "1.5", serving: "80" });
+  const partial = offPrefill({ code: "8480000123456", name: "Raro", brand: null, kcal: null, protein: null, carbs: null, fat: null, serving_g: null });
+  assert.deepEqual(partial, { name: "Raro", barcode: "8480000123456" });
 });
