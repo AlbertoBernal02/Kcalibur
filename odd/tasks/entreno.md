@@ -8,11 +8,11 @@ Rama: feat/entreno · Entrega: ask-on-risk · Tests: `npm test` (node:test) + Pl
 - S4 Progreso por ejercicio, récords y edición de la rutina (funcionalidades a iterar con feedback de Playwright).
 
 ## Tasks
-- T1 (S1) Parser puro grid→programa + tests · inline · pendiente
-- T2 (S1) Migración 0013 + capa de datos + ruta /api/training/import · inline · pendiente
-- T3 (S2) Modo Entreno: nav, Hoy, Rutina, importador con vista previa · inline · pendiente
-- T4 (S3) Sesión de entreno + temporizador · inline · pendiente
-- T5 (S4) Progreso, récords, edición · inline · pendiente
+- T1 (S1) Parser puro grid→programa + tests · inline · hecho
+- T2 (S1) Migración 0013 + capa de datos + ruta /api/training/import · inline · hecho
+- T3 (S2) Modo Entreno: nav, Hoy, Rutina, importador con vista previa · inline · hecho
+- T4 (S3) Sesión de entreno + temporizador · inline · hecho
+- T5 (S4) Progreso, récords · inline · hecho (edición de rutina pendiente)
 
 ## Log
 - L1 (2026-11-03) "necesito hacer una pestaña que cambie la app completamente, pasaría a ser la segunda parte para el tema del entreno, tiene que ser facil de usar. por ejemplo mi forma de entrenar es por hojas de cálculo de google, te la meto en el proyecto para veas como es @1º RUTINA - B - TEAMTOCHO SEMANA B.xlsx, entonces si yo importo un excel que se cree el diario de entrenamiento automáticamente, no se que funcioanlidades podemos meterl epero vas a empezar a desarrollar a la vez que con el mcp vas retroalimentando errores y nuevas funcionalidades hasta que lo tengas lo más completo posible"

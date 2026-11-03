@@ -141,3 +141,14 @@ test("textos de sesión", () => {
   assert.equal(isoWeekday(new Date(2026, 10, 1)), 7); // domingo
   assert.equal(isoWeekday(new Date(2026, 10, 2)), 1); // lunes
 });
+
+// --- progreso ---
+import { programProgress } from "./progress.ts";
+
+test("programProgress toma la mejor serie por semana y calcula el cambio de 1RM", () => {
+  const e = ex([log(1, 0, 40, 8), log(1, 1, 30, 8), log(3, 0, 50, 8), log(2, 0, null, 10)]); // sin peso no cuenta
+  const [p] = programProgress([{ id: "d", name: "L", weekday: 1, exercises: [e] }]);
+  assert.deepEqual(p.weeks.map((w) => [w.week, w.weight]), [[1, 40], [3, 50]]);
+  assert.equal(Math.round(p.change!), 25); // 40 → 50 kg con las mismas reps
+  assert.equal(p.pr?.week, 3);
+});
