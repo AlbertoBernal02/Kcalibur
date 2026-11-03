@@ -105,3 +105,28 @@ export async function deleteProgram(sb: SupabaseClient, programId: string) {
   const { error } = await sb.from("workout_programs").delete().eq("id", programId);
   if (error) throw error;
 }
+
+export type ExercisePatch = { name: string; notes: string; restSeconds: number | null; videoUrl: string | null; plan: Exercise["plan"] };
+
+const toRow = (p: ExercisePatch) => ({ name: p.name, notes: p.notes, rest_seconds: p.restSeconds, video_url: p.videoUrl, plan: p.plan });
+
+export async function updateExercise(sb: SupabaseClient, id: string, p: ExercisePatch) {
+  const { error } = await sb.from("workout_exercises").update(toRow(p)).eq("id", id);
+  if (error) throw error;
+}
+
+export async function addExercise(sb: SupabaseClient, userId: string, dayId: string, position: number, p: ExercisePatch) {
+  const { error } = await sb.from("workout_exercises").insert({ user_id: userId, day_id: dayId, position, ...toRow(p) });
+  if (error) throw error;
+}
+
+// Borra el ejercicio y, en cascada, todos sus registros.
+export async function deleteExercise(sb: SupabaseClient, id: string) {
+  const { error } = await sb.from("workout_exercises").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function renameDay(sb: SupabaseClient, id: string, name: string) {
+  const { error } = await sb.from("workout_days").update({ name }).eq("id", id);
+  if (error) throw error;
+}

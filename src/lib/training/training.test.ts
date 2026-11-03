@@ -152,3 +152,22 @@ test("programProgress toma la mejor serie por semana y calcula el cambio de 1RM"
   assert.equal(Math.round(p.change!), 25); // 40 → 50 kg con las mismas reps
   assert.equal(p.pr?.week, 3);
 });
+
+// --- edición ---
+import { applySets, parseRestInput } from "./edit.ts";
+
+test("applySets cambia solo la semana indicada o también las siguientes", () => {
+  const plan = { 1: [{ reps: "8", rir: "1" }], 2: [{ reps: "8", rir: "1" }], 3: [{ reps: "8", rir: "1" }] };
+  const one = applySets(plan, 2, [{ reps: "10", rir: "0" }, { reps: "10", rir: "0" }], 3, false);
+  assert.deepEqual([one[1].length, one[2].length, one[3].length], [1, 2, 1]);
+  const all = applySets(plan, 2, [{ reps: "10", rir: "0" }], 3, true);
+  assert.deepEqual([all[1][0].reps, all[2][0].reps, all[3][0].reps], ["8", "10", "10"]);
+});
+
+test("parseRestInput acepta mm:ss, minutos y segundos", () => {
+  assert.equal(parseRestInput("1:30"), 90);
+  assert.equal(parseRestInput("2"), 120);
+  assert.equal(parseRestInput("45"), 45);
+  assert.equal(parseRestInput(""), null);
+  assert.equal(parseRestInput("abc"), null);
+});
