@@ -6,7 +6,7 @@ import { INITIAL_SYNC_STATE, dismissFailed, flush, getSyncState, initSyncState, 
 import { createClient } from "@/lib/supabase/client";
 
 // Pantallas que se guardan de antemano para poder abrirlas sin conexión.
-const PRECACHE = ["/", "/alimentos", "/comidas", "/progreso", "/perfil"];
+const PRECACHE = ["/", "/alimentos", "/comidas", "/progreso", "/perfil", "/entreno", "/entreno/rutina", "/entreno/progreso"];
 
 const subscribeOnline = (cb: () => void) => {
   window.addEventListener("online", cb);

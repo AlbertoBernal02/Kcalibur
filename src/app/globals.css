@@ -88,3 +88,26 @@ select,
 textarea {
   font-size: 16px;
 }
+
+/* Modo Entreno: paleta cálida propia para distinguirlo del modo Dieta (las pantallas del entreno llevan data-mode="training"). */
+body:has([data-mode="training"]) {
+  --background: #efe6dc;
+  --hero: #f6d5b4;
+  --card: #fbf6f0;
+  --muted: #e6d9cb;
+  --subtle: #6b5545;
+  --border: #d9c6b2;
+  --primary: #c2410c;
+  --foreground: #231a13;
+}
+.dark body:has([data-mode="training"]) {
+  --background: #14100c;
+  --hero: #3a2312;
+  --card: #1e1813;
+  --muted: #2a2119;
+  --subtle: #b2a08f;
+  --border: #3a2e24;
+  --primary: #fb923c;
+  --primary-fg: #1a0c02;
+  --foreground: #f3ebe3;
+}
