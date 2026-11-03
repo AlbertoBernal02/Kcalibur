@@ -6,6 +6,7 @@ import { deleteProgram, renameDay } from "@/lib/data/training";
 import { createClient } from "@/lib/supabase/client";
 import { fmtClock } from "@/lib/training/log";
 import { Button } from "@/components/ui";
+import { ArchivedPrograms } from "./archived-programs";
 import { ErrorNote, WEEKDAYS } from "./bits";
 import { ExerciseEditor, type EditTarget } from "./exercise-editor";
 import { ImportProgram } from "./import-program";
@@ -19,7 +20,13 @@ export function ProgramView() {
 
   if (error) return <ErrorNote>{error}</ErrorNote>;
   if (program === undefined) return <div className="h-48 animate-pulse rounded-3xl bg-muted" aria-label="Cargando rutina" />;
-  if (program === null) return <ImportProgram onImported={reload} />;
+  if (program === null)
+    return (
+      <>
+        <ImportProgram onImported={reload} />
+        <ArchivedPrograms onSwitched={reload} />
+      </>
+    );
 
   async function remove() {
     if (!program || !confirm(`¿Borrar la rutina «${program.name}» con todo su histórico? No se puede deshacer.`)) return;
@@ -93,6 +100,7 @@ export function ProgramView() {
           <Trash2 size={18} /> Borrar esta rutina
         </Button>
       </div>
+      <ArchivedPrograms key={program.id} onSwitched={reload} />
     </>
   );
 }

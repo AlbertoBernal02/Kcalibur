@@ -130,3 +130,20 @@ export async function renameDay(sb: SupabaseClient, id: string, name: string) {
   const { error } = await sb.from("workout_days").update({ name }).eq("id", id);
   if (error) throw error;
 }
+
+export type ArchivedProgram = { id: string; name: string; weeks: number };
+
+// Programas archivados (los que dejaron de ser el activo al importar otro), del más reciente al más antiguo.
+export async function loadArchived(sb: SupabaseClient): Promise<ArchivedProgram[]> {
+  const { data, error } = await sb.from("workout_programs").select("id, name, weeks").eq("active", false).order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as ArchivedProgram[];
+}
+
+// Pone un programa archivado como activo (el que lo era pasa a archivado).
+export async function activateProgram(sb: SupabaseClient, id: string) {
+  const off = await sb.from("workout_programs").update({ active: false }).eq("active", true);
+  if (off.error) throw off.error;
+  const on = await sb.from("workout_programs").update({ active: true }).eq("id", id);
+  if (on.error) throw on.error;
+}
