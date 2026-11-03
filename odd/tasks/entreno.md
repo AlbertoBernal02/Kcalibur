@@ -18,7 +18,7 @@ Rama: feat/entreno · Entrega: ask-on-risk · Tests: `npm test` (node:test) + Pl
 - T8 (S3) Fase 8: guardado sin conexión (cola de series) · inline · hecho
 - T9 (S4) Fase 9: reimportar sin perder registros + pulido (tablet, accesibilidad) · inline · hecho
 - T10 (S3) Fase 10: resumen al terminar la sesión · inline · hecho
-- T11 (S4) Fase 11: reordenar ejercicios · inline · pendiente
+- T11 (S4) Fase 11: reordenar ejercicios · inline · hecho
 - T12 (S4) Fase 12: calendario de entrenos hechos · inline · pendiente
 
 ## Log

@@ -112,7 +112,7 @@ import type { ExerciseData } from "../data/training.ts";
 
 const log = (week: number, setIndex: number, weight: number | null, reps: number | null) => ({ week, setIndex, weight, reps, rir: null, note: "", loggedOn: "2026-11-03" });
 const ex = (logs: ExerciseData["logs"]): ExerciseData => ({
-  id: "e", name: "Hack", notes: "", restSeconds: 120, videoUrl: null, logs,
+  id: "e", position: 0, name: "Hack", notes: "", restSeconds: 120, videoUrl: null, logs,
   plan: { 1: [{ reps: "8", rir: "1" }, { reps: "8", rir: "1" }], 2: [{ reps: "8", rir: "1" }, { reps: "8", rir: "1" }] },
 });
 

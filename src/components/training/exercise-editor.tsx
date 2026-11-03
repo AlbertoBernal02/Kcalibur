@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { addExercise, deleteExercise, updateExercise, type ExerciseData } from "@/lib/data/training";
 import { createClient, currentUserId } from "@/lib/supabase/client";
@@ -10,7 +10,7 @@ import type { PlanSet } from "@/lib/training/types";
 import { Sheet } from "@/components/sheet";
 import { Button, Field, inputCls } from "@/components/ui";
 
-export type EditTarget = { kind: "edit"; ex: ExerciseData } | { kind: "add"; dayId: string; position: number };
+export type EditTarget = { kind: "edit"; ex: ExerciseData; canUp: boolean; canDown: boolean; move: (dir: -1 | 1) => Promise<void> } | { kind: "add"; dayId: string; position: number };
 
 const DEFAULT_SETS: PlanSet[] = [
   { reps: "10", rir: "1" },
@@ -55,6 +55,20 @@ export function ExerciseEditor({ target, week, weeks, onDone, onClose }: { targe
       onClose();
     } catch {
       setError("No se pudo guardar el ejercicio.");
+      setBusy(false);
+    }
+  }
+
+  // Subir/bajar el ejercicio dentro del día.
+  async function move(dir: -1 | 1) {
+    if (target.kind !== "edit") return;
+    setBusy(true);
+    try {
+      await target.move(dir);
+      await onDone();
+      onClose();
+    } catch {
+      setError("No se pudo cambiar el orden.");
       setBusy(false);
     }
   }
@@ -116,6 +130,16 @@ export function ExerciseEditor({ target, week, weeks, onDone, onClose }: { targe
         </div>
 
         <Button disabled={busy} onClick={save}>{busy ? "Guardando…" : "Guardar"}</Button>
+        {target.kind === "edit" && (
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="secondary" disabled={busy || !target.canUp} onClick={() => move(-1)} className="flex items-center justify-center gap-2">
+              <ArrowUp size={18} /> Subir
+            </Button>
+            <Button variant="secondary" disabled={busy || !target.canDown} onClick={() => move(1)} className="flex items-center justify-center gap-2">
+              <ArrowDown size={18} /> Bajar
+            </Button>
+          </div>
+        )}
         {ex && (
           <Button variant="secondary" disabled={busy} onClick={remove} className="text-danger">
             Borrar ejercicio

@@ -4,7 +4,7 @@ import type { Exercise, ParsedProgram, PlanSet } from "@/lib/training/types";
 
 // Una serie registrada (que exista = hecha).
 export type LogRow = { week: number; setIndex: number; weight: number | null; reps: number | null; rir: number | null; note: string; loggedOn: string };
-export type ExerciseData = Exercise & { id: string; logs: LogRow[] };
+export type ExerciseData = Exercise & { id: string; position: number; logs: LogRow[] };
 export type DayData = { id: string; name: string; weekday: number | null; exercises: ExerciseData[] };
 export type ProgramData = { id: string; name: string; weeks: number; currentWeek: number; days: DayData[] };
 
@@ -35,6 +35,7 @@ export async function loadProgram(sb: SupabaseClient): Promise<ProgramData | nul
       weekday: d.weekday,
       exercises: [...d.workout_exercises].sort(byPosition).map((e) => ({
         id: e.id,
+        position: e.position,
         name: e.name,
         notes: e.notes,
         restSeconds: e.rest_seconds,
@@ -146,4 +147,11 @@ export async function activateProgram(sb: SupabaseClient, id: string) {
   if (off.error) throw off.error;
   const on = await sb.from("workout_programs").update({ active: true }).eq("id", id);
   if (on.error) throw on.error;
+}
+
+// Guarda el orden de los ejercicios de un día: la posición de cada id es su índice en la lista.
+export async function reorderExercises(sb: SupabaseClient, orderedIds: string[]) {
+  const results = await Promise.all(orderedIds.map((id, position) => sb.from("workout_exercises").update({ position }).eq("id", id)));
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
 }
