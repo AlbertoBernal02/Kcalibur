@@ -52,3 +52,21 @@ export function isRecord(ex: ExerciseData, week: number, setIndex: number, v: { 
   if (others.length === 0) return false;
   return est1RM(v.weight, v.reps) > Math.max(...others.map((l) => est1RM(l.weight!, l.reps!)));
 }
+
+export type SessionSummary = { sets: number; volume: number; prevVolume: number | null; records: { name: string; weight: number; reps: number }[] };
+
+const volumeOf = (d: DayData, week: number) =>
+  d.exercises.reduce((sum, e) => sum + e.logs.filter((l) => l.week === week).reduce((s, l) => s + (l.weight ?? 0) * (l.reps ?? 0), 0), 0);
+
+// Resumen de un día en una semana: series, volumen (y el de la semana anterior si hubo) y ejercicios donde
+// la mejor serie de esta semana supera el mejor 1RM estimado de las semanas anteriores.
+export function sessionSummary(day: DayData, week: number): SessionSummary {
+  const records: SessionSummary["records"] = [];
+  for (const e of day.exercises) {
+    const prior = weeklyBest({ ...e, logs: e.logs.filter((l) => l.week < week) });
+    const now = weeklyBest({ ...e, logs: e.logs.filter((l) => l.week === week) })[0];
+    if (now && prior.length && now.e1rm > Math.max(...prior.map((p) => p.e1rm))) records.push({ name: e.name, weight: now.weight, reps: now.reps });
+  }
+  const prev = volumeOf(day, week - 1);
+  return { sets: day.exercises.reduce((n, e) => n + e.logs.filter((l) => l.week === week).length, 0), volume: volumeOf(day, week), prevVolume: prev > 0 ? prev : null, records };
+}

@@ -3,12 +3,12 @@
 import { ArrowLeft, Check, ExternalLink, StickyNote, Timer, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { deleteLog, saveLog, type ExerciseData, type LogRow, type SetValues } from "@/lib/data/training";
+import { deleteLog, saveLog, type DayData, type ExerciseData, type LogRow, type SetValues } from "@/lib/data/training";
 import { enqueue } from "@/lib/data/training-sync";
 import { isNetworkError } from "@/lib/offline/store";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { fmtClock, fmtNum } from "@/lib/training/log";
-import { isRecord } from "@/lib/training/progress";
+import { isRecord, sessionSummary } from "@/lib/training/progress";
 import { dayProgress, dayVolume, firstNumber, logOf, previousLog, summarizeLog, targetText, todayISO, withLog } from "@/lib/training/session";
 import { inputBase } from "@/components/ui";
 import { Bar, ErrorNote } from "./bits";
@@ -145,6 +145,8 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
         ))}
       </div>
 
+      {total > 0 && done >= total && <SummaryCard day={day} week={w} />}
+
       {rest && <RestTimer rest={rest} onChange={setRest} onClose={closeRest} />}
     </>
   );
@@ -244,5 +246,38 @@ function SetRow({ ex, week, index, target, onSave, onUndo }: { ex: ExerciseData;
         </button>
       </div>
     </li>
+  );
+}
+
+// Resumen al completar todas las series del día.
+function SummaryCard({ day, week }: { day: DayData; week: number }) {
+  const s = sessionSummary(day, week);
+  const diff = s.prevVolume ? ((s.volume - s.prevVolume) / s.prevVolume) * 100 : null;
+  return (
+    <section aria-label="Resumen de la sesión" className="mt-4 rounded-3xl bg-primary/10 p-5">
+      <h2 className="text-lg font-bold">¡Sesión completada! 💪</h2>
+      <p className="mt-1 text-sm">
+        {s.sets} series · {fmtNum(Math.round(s.volume))} kg movidos
+        {diff !== null && (
+          <span className={diff >= 0 ? "text-primary" : "text-danger"}>
+            {" "}
+            ({diff > 0 ? "+" : ""}
+            {fmtNum(Math.round(diff * 10) / 10)}% vs semana anterior)
+          </span>
+        )}
+      </p>
+      {s.records.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-1 text-sm">
+          {s.records.map((r) => (
+            <li key={r.name} className="flex items-center gap-2">
+              <Trophy size={16} className="text-primary" /> {r.name}: {fmtNum(r.weight)} kg × {fmtNum(r.reps)}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link href="/entreno" className="mt-4 flex h-12 items-center justify-center rounded-2xl bg-primary font-semibold text-primary-fg">
+        Volver a Hoy
+      </Link>
+    </section>
   );
 }

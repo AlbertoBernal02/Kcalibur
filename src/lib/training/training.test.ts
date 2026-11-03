@@ -195,3 +195,15 @@ test("la cola conserva solo la última operación por serie y se aplica al progr
   q = enqueueOp(q, { kind: "undo", exerciseId: "e", week: 2, setIndex: 0 });
   assert.equal(applyQueue(p, q).days[0].exercises[0].logs.length, 0);
 });
+
+import { sessionSummary } from "./progress.ts";
+
+test("sessionSummary compara con la semana anterior y detecta récords", () => {
+  const e = ex([log(1, 0, 40, 8), log(2, 0, 45, 8), log(2, 1, 30, 8)]);
+  const s = sessionSummary({ id: "d", name: "L", weekday: 1, exercises: [e] }, 2);
+  assert.equal(s.sets, 2);
+  assert.equal(s.volume, 45 * 8 + 30 * 8);
+  assert.equal(s.prevVolume, 40 * 8);
+  assert.deepEqual(s.records.map((r) => r.weight), [45]);
+  assert.equal(sessionSummary({ id: "d", name: "L", weekday: 1, exercises: [e] }, 1).prevVolume, null);
+});
