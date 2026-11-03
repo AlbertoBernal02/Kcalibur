@@ -4,6 +4,7 @@ import { Trophy } from "lucide-react";
 import { fmtNum } from "@/lib/training/log";
 import { programProgress, weeklyVolume, type ExerciseProgress } from "@/lib/training/progress";
 import { ErrorNote } from "./bits";
+import { TrainingCalendar } from "./training-calendar";
 import { useProgram } from "./use-program";
 
 // Pantalla "Progreso" del modo Entreno: volumen por semana y evolución de cada ejercicio.
@@ -19,6 +20,8 @@ export function TrainingProgress() {
 
   return (
     <>
+      <TrainingCalendar days={program.days} />
+
       <section aria-label="Volumen por semana" className="mb-5 rounded-3xl bg-card p-5">
         <h2 className="font-semibold">Volumen por semana</h2>
         <p className="text-xs text-subtle">Peso × repeticiones de todas las series, en kg.</p>

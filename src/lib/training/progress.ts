@@ -70,3 +70,28 @@ export function sessionSummary(day: DayData, week: number): SessionSummary {
   const prev = volumeOf(day, week - 1);
   return { sets: day.exercises.reduce((n, e) => n + e.logs.filter((l) => l.week === week).length, 0), volume: volumeOf(day, week), prevVolume: prev > 0 ? prev : null, records };
 }
+
+export type TrainedDay = { sets: number; days: string[] };
+
+// Fechas en las que registraste series (las importadas del Excel no tienen fecha) → nº de series y días de rutina.
+export function trainedDates(days: DayData[]): Map<string, TrainedDay> {
+  const out = new Map<string, TrainedDay>();
+  for (const d of days) {
+    for (const l of d.exercises.flatMap((e) => e.logs)) {
+      if (!l.loggedOn) continue;
+      const cur = out.get(l.loggedOn) ?? { sets: 0, days: [] };
+      cur.sets++;
+      if (!cur.days.includes(d.name)) cur.days.push(d.name);
+      out.set(l.loggedOn, cur);
+    }
+  }
+  return out;
+}
+
+// Casillas de un mes (empezando en lunes): null para los huecos y "YYYY-MM-DD" para cada día. `month` es 0-11.
+export function monthGrid(year: number, month: number): (string | null)[] {
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7;
+  const count = new Date(year, month + 1, 0).getDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return [...Array<null>(offset).fill(null), ...Array.from({ length: count }, (_, i) => `${year}-${pad(month + 1)}-${pad(i + 1)}`)];
+}

@@ -207,3 +207,17 @@ test("sessionSummary compara con la semana anterior y detecta récords", () => {
   assert.deepEqual(s.records.map((r) => r.weight), [45]);
   assert.equal(sessionSummary({ id: "d", name: "L", weekday: 1, exercises: [e] }, 1).prevVolume, null);
 });
+
+import { monthGrid, trainedDates } from "./progress.ts";
+
+test("trainedDates ignora series sin fecha y monthGrid empieza en lunes", () => {
+  const dated = { ...log(1, 0, 40, 8), loggedOn: "2026-11-03" };
+  const imported = { ...log(1, 1, 40, 8), loggedOn: null };
+  const t = trainedDates([{ id: "d", name: "Lunes", weekday: 1, exercises: [ex([dated, imported, { ...dated, setIndex: 2 }])] }]);
+  assert.deepEqual([...t.keys()], ["2026-11-03"]);
+  assert.deepEqual(t.get("2026-11-03"), { sets: 2, days: ["Lunes"] });
+  const g = monthGrid(2026, 10); // noviembre 2026: el día 1 es domingo → 6 huecos
+  assert.equal(g.filter((x) => x === null).length, 6);
+  assert.equal(g[6], "2026-11-01");
+  assert.equal(g.at(-1), "2026-11-30");
+});

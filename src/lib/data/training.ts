@@ -3,12 +3,12 @@ import { startWeek } from "@/lib/training/import-grid";
 import type { Exercise, ParsedProgram, PlanSet } from "@/lib/training/types";
 
 // Una serie registrada (que exista = hecha).
-export type LogRow = { week: number; setIndex: number; weight: number | null; reps: number | null; rir: number | null; note: string; loggedOn: string };
+export type LogRow = { week: number; setIndex: number; weight: number | null; reps: number | null; rir: number | null; note: string; loggedOn: string | null };
 export type ExerciseData = Exercise & { id: string; position: number; logs: LogRow[] };
 export type DayData = { id: string; name: string; weekday: number | null; exercises: ExerciseData[] };
 export type ProgramData = { id: string; name: string; weeks: number; currentWeek: number; days: DayData[] };
 
-type LogDb = { week: number; set_index: number; weight: number | null; reps: number | null; rir: number | null; note: string; logged_on: string };
+type LogDb = { week: number; set_index: number; weight: number | null; reps: number | null; rir: number | null; note: string; logged_on: string | null };
 type ExerciseDb = { id: string; name: string; notes: string; rest_seconds: number | null; video_url: string | null; plan: Record<string, PlanSet[]>; position: number; set_logs: LogDb[] };
 type DayDb = { id: string; name: string; weekday: number | null; position: number; workout_exercises: ExerciseDb[] };
 type ProgramDb = { id: string; name: string; weeks: number; current_week: number; workout_days: DayDb[] };
@@ -69,7 +69,7 @@ export async function importProgram(sb: SupabaseClient, userId: string, name: st
     check((await sb.from("workout_exercises").insert(exercises.map((x) => ({ id: x.id, ...x.row })))).error);
 
     const logs = exercises.flatMap((x) =>
-      x.e.history.map((h) => ({ user_id: userId, exercise_id: x.id, week: h.week, set_index: h.setIndex, weight: h.weight, reps: h.reps, rir: h.rir, note: h.note })),
+      x.e.history.map((h) => ({ user_id: userId, exercise_id: x.id, week: h.week, set_index: h.setIndex, weight: h.weight, reps: h.reps, rir: h.rir, note: h.note, logged_on: null })),
     );
     if (logs.length) check((await sb.from("set_logs").insert(logs)).error);
     return programId;

@@ -19,7 +19,7 @@ Rama: feat/entreno · Entrega: ask-on-risk · Tests: `npm test` (node:test) + Pl
 - T9 (S4) Fase 9: reimportar sin perder registros + pulido (tablet, accesibilidad) · inline · hecho
 - T10 (S3) Fase 10: resumen al terminar la sesión · inline · hecho
 - T11 (S4) Fase 11: reordenar ejercicios · inline · hecho
-- T12 (S4) Fase 12: calendario de entrenos hechos · inline · pendiente
+- T12 (S4) Fase 12: calendario de entrenos hechos · inline · hecho
 
 ## Log
 - L1 (2026-11-03) "necesito hacer una pestaña que cambie la app completamente, pasaría a ser la segunda parte para el tema del entreno, tiene que ser facil de usar. por ejemplo mi forma de entrenar es por hojas de cálculo de google, te la meto en el proyecto para veas como es @1º RUTINA - B - TEAMTOCHO SEMANA B.xlsx, entonces si yo importo un excel que se cree el diario de entrenamiento automáticamente, no se que funcioanlidades podemos meterl epero vas a empezar a desarrollar a la vez que con el mcp vas retroalimentando errores y nuevas funcionalidades hasta que lo tengas lo más completo posible"
