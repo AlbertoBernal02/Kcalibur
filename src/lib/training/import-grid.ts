@@ -122,3 +122,16 @@ export function parseGrids(grids: Grid[]): ParsedProgram | null {
   if (parsed.length === 0) return null;
   return { weeks: Math.max(...parsed.map((p) => p.weeks)), days: parsed.map((p) => p.day) };
 }
+
+// Semana por la que vas: la última con registros, o la siguiente si esa ya está hecha al 80 % o más.
+export function startWeek(p: ParsedProgram): number {
+  const planned: Record<number, number> = {};
+  const logged: Record<number, number> = {};
+  for (const e of p.days.flatMap((d) => d.exercises)) {
+    for (const [w, sets] of Object.entries(e.plan)) planned[+w] = (planned[+w] ?? 0) + sets.length;
+    for (const h of e.history) logged[h.week] = (logged[h.week] ?? 0) + 1;
+  }
+  const last = Math.max(0, ...Object.keys(logged).map(Number));
+  if (last === 0) return 1;
+  return Math.min(p.weeks, logged[last] >= (planned[last] ?? Infinity) * 0.8 ? last + 1 : last);
+}

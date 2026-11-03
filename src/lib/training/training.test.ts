@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { parseGrids, parseRange, niceName, type Grid } from "./import-grid.ts";
+import { parseGrids, parseRange, niceName, startWeek, type Grid } from "./import-grid.ts";
 import { est1RM, parseLog, splitRest } from "./log.ts";
 import { readWorkbook } from "./xlsx-read.ts";
 
@@ -103,4 +103,41 @@ test("importa el Excel real", { skip: !existsSync(REAL) }, async () => {
   assert.equal(gem.plan[1].length, 4);
   assert.deepEqual([gem.history[0].weight, gem.history[0].reps], [20, 19]);
   for (const d of p.days) assert.ok(d.exercises.length >= 4, `${d.name}: ejercicios`);
+  assert.ok(startWeek(p) >= 4, "empieza por la semana en curso, no por la 1");
+});
+
+// --- sesión ---
+import { dayProgress, firstNumber, isoWeekday, previousLog, summarizeLog, targetText, todayISO } from "./session.ts";
+import type { ExerciseData } from "../data/training.ts";
+
+const log = (week: number, setIndex: number, weight: number | null, reps: number | null) => ({ week, setIndex, weight, reps, rir: null, note: "", loggedOn: "2026-11-03" });
+const ex = (logs: ExerciseData["logs"]): ExerciseData => ({
+  id: "e", name: "Hack", notes: "", restSeconds: 120, videoUrl: null, logs,
+  plan: { 1: [{ reps: "8", rir: "1" }, { reps: "8", rir: "1" }], 2: [{ reps: "8", rir: "1" }, { reps: "8", rir: "1" }] },
+});
+
+test("previousLog devuelve la semana anterior más reciente de esa misma serie", () => {
+  const e = ex([log(1, 0, 40, 8), log(2, 0, 45, 8), log(2, 1, 42.5, 8)]);
+  assert.equal(previousLog(e, 3, 0)?.weight, 45); // semana 2 gana a la 1
+  assert.equal(previousLog(e, 2, 1), null); // la serie 1 no existía en la semana 1
+  assert.equal(previousLog(e, 1, 0), null); // nada antes de la semana 1
+});
+
+test("dayProgress cuenta series hechas sobre las planificadas de esa semana", () => {
+  const day = { id: "d", name: "Lunes", weekday: 1, exercises: [ex([log(1, 0, 40, 8), log(2, 0, 45, 8)])] };
+  assert.deepEqual(dayProgress(day, 1), { done: 1, total: 2 });
+  assert.deepEqual(dayProgress(day, 3), { done: 0, total: 0 });
+});
+
+test("textos de sesión", () => {
+  assert.equal(firstNumber("7 RIR 2 | RM 80%"), 7);
+  assert.equal(firstNumber("FALLO"), null);
+  assert.equal(targetText({ reps: "15", rir: "1" }), "15 reps · RIR 1");
+  assert.equal(targetText({ reps: "8 + 12", rir: "" }), "8 + 12");
+  assert.equal(targetText({ reps: "-", rir: "" }), "máx.");
+  assert.equal(summarizeLog({ weight: 12.5, reps: 18, note: "" }), "12,5 × 18");
+  assert.equal(summarizeLog({ weight: null, reps: null, note: "FALLO" }), "FALLO");
+  assert.equal(todayISO(new Date(2026, 10, 3, 23, 59)), "2026-11-03");
+  assert.equal(isoWeekday(new Date(2026, 10, 1)), 7); // domingo
+  assert.equal(isoWeekday(new Date(2026, 10, 2)), 1); // lunes
 });
