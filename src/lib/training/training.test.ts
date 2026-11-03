@@ -182,3 +182,16 @@ test("isRecord solo avisa si supera el mejor 1RM previo", () => {
   assert.equal(isRecord(ex([]), 1, 0, { weight: 40, reps: 8 }), false); // primera vez
   assert.equal(isRecord(e, 2, 0, { weight: null, reps: 10 }), false);
 });
+
+import { applyQueue, enqueueOp } from "./queue.ts";
+
+test("la cola conserva solo la última operación por serie y se aplica al programa", () => {
+  const save = (reps: number) => ({ kind: "save" as const, exerciseId: "e", week: 2, setIndex: 0, values: { weight: 50, reps, rir: null }, date: "2026-11-03" });
+  let q = enqueueOp([], save(8));
+  q = enqueueOp(q, save(9));
+  assert.equal(q.length, 1);
+  const p = { id: "p", name: "P", weeks: 3, currentWeek: 2, days: [{ id: "d", name: "L", weekday: 1, exercises: [ex([])] }] };
+  assert.equal(applyQueue(p, q).days[0].exercises[0].logs[0].reps, 9);
+  q = enqueueOp(q, { kind: "undo", exerciseId: "e", week: 2, setIndex: 0 });
+  assert.equal(applyQueue(p, q).days[0].exercises[0].logs.length, 0);
+});

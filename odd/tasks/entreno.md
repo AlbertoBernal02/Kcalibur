@@ -15,7 +15,7 @@ Rama: feat/entreno · Entrega: ask-on-risk · Tests: `npm test` (node:test) + Pl
 - T5 (S4) Progreso, récords · inline · hecho (edición de rutina pendiente)
 - T6 (S4) Fase 6: editar rutina (ejercicios, series/objetivos por semana, añadir/quitar, renombrar día) · inline · hecho
 - T7 (S4) Fase 7: notas por serie y avisos de récord personal · inline · hecho
-- T8 (S3) Fase 8: guardado sin conexión (cola de series) · inline · pendiente
+- T8 (S3) Fase 8: guardado sin conexión (cola de series) · inline · hecho
 - T9 (S4) Fase 9: reimportar sin perder registros + pulido (tablet, accesibilidad) · inline · pendiente
 
 ## Log

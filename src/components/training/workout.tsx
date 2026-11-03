@@ -4,6 +4,8 @@ import { ArrowLeft, Check, ExternalLink, StickyNote, Timer, Trophy } from "lucid
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { deleteLog, saveLog, type ExerciseData, type LogRow, type SetValues } from "@/lib/data/training";
+import { enqueue } from "@/lib/data/training-sync";
+import { isNetworkError } from "@/lib/offline/store";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { fmtClock, fmtNum } from "@/lib/training/log";
 import { isRecord } from "@/lib/training/progress";
@@ -26,6 +28,7 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
   const [rest, setRest] = useState<Rest | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
   const closeRest = useCallback(() => setRest(null), []);
 
   // Mantiene la pantalla encendida durante la sesión (el móvil está apoyado en el banco).
@@ -61,7 +64,13 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
     const date = todayISO();
     try {
       const record = isRecord(ex, w, setIndex, v);
-      await saveLog(createClient(), await currentUserId(), ex.id, w, setIndex, v, date);
+      try {
+        await saveLog(createClient(), await currentUserId(), ex.id, w, setIndex, v, date);
+      } catch (e) {
+        if (!isNetworkError(e)) throw e;
+        await enqueue({ kind: "save", exerciseId: ex.id, week: w, setIndex, values: v, date }); // se sube al volver la red
+        setOffline(true);
+      }
       if (record) {
         setBanner(`¡Récord en ${ex.name}! ${fmtNum(v.weight!)} kg × ${fmtNum(v.reps!)}`);
         setTimeout(() => setBanner(null), 6000);
@@ -77,7 +86,13 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
   async function onUndo(ex: ExerciseData, setIndex: number) {
     setProblem(null);
     try {
-      await deleteLog(createClient(), ex.id, w, setIndex);
+      try {
+        await deleteLog(createClient(), ex.id, w, setIndex);
+      } catch (e) {
+        if (!isNetworkError(e)) throw e;
+        await enqueue({ kind: "undo", exerciseId: ex.id, week: w, setIndex });
+        setOffline(true);
+      }
       setProgram((p) => (p ? withLog(p, ex.id, w, setIndex, null) : p));
     } catch {
       setProblem("No se pudo desmarcar la serie.");
@@ -113,6 +128,11 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
       </nav>
 
       {problem && <ErrorNote>{problem}</ErrorNote>}
+      {offline && (
+        <p role="status" className="mb-4 rounded-xl bg-muted px-4 py-3 text-sm text-subtle">
+          Sin conexión: tus series se guardan en el móvil y se subirán solas cuando vuelva la red.
+        </p>
+      )}
       {banner && (
         <p role="status" className="mb-4 flex items-center gap-2 rounded-xl bg-primary/15 px-4 py-3 text-sm font-semibold text-primary">
           <Trophy size={18} /> {banner}
