@@ -54,6 +54,14 @@ public/sw.js        service worker
 supabase/migrations esquema versionado (RLS en todas las tablas; bucket privado de fotos)
 ```
 
+## Modo Entreno
+
+Pestaña «Entreno» (barra inferior propia, paleta cálida). Importa un `.xlsx` de rutina (una hoja por día; cabecera `EJERCICIO`; columnas `SEMANA 1…n` con series/reps/RIR y el registro `PESO x REPS x RIR`) y se crea el diario: sesión con objetivo y referencia de la semana anterior, descanso, notas, récords, resumen, progreso por ejercicio, calendario, edición de la rutina y guardado sin conexión.
+
+- Rutas: `/entreno` (Hoy), `/entreno/rutina`, `/entreno/progreso`, `/entreno/sesion/[dayId]`, `POST /api/training/import` (solo lee el Excel; guardar lo hace el cliente con RLS).
+- Código: `src/lib/training/` (parser y lógica pura con tests), `src/lib/data/training*.ts`, `src/components/training/`.
+- Esquema: migraciones `0013` y `0014`. Los `.xlsx` están en `.gitignore` (son datos personales).
+
 ## Notas
 
 - Los valores nutricionales de los alimentos genéricos son aproximados (USDA/BEDCA): revísalos si algo no cuadra con tu etiqueta.
