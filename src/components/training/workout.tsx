@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowLeft, Check, ExternalLink, Timer } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, StickyNote, Timer, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { deleteLog, saveLog, type ExerciseData, type LogRow, type SetValues } from "@/lib/data/training";
 import { createClient, currentUserId } from "@/lib/supabase/client";
 import { fmtClock, fmtNum } from "@/lib/training/log";
+import { isRecord } from "@/lib/training/progress";
 import { dayProgress, dayVolume, firstNumber, logOf, previousLog, summarizeLog, targetText, todayISO, withLog } from "@/lib/training/session";
 import { inputBase } from "@/components/ui";
 import { Bar, ErrorNote } from "./bits";
@@ -24,6 +25,7 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
   const [week, setWeek] = useState<number | null>(initialWeek);
   const [rest, setRest] = useState<Rest | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
   const closeRest = useCallback(() => setRest(null), []);
 
   // Mantiene la pantalla encendida durante la sesión (el móvil está apoyado en el banco).
@@ -58,7 +60,12 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
     setProblem(null);
     const date = todayISO();
     try {
+      const record = isRecord(ex, w, setIndex, v);
       await saveLog(createClient(), await currentUserId(), ex.id, w, setIndex, v, date);
+      if (record) {
+        setBanner(`¡Récord en ${ex.name}! ${fmtNum(v.weight!)} kg × ${fmtNum(v.reps!)}`);
+        setTimeout(() => setBanner(null), 6000);
+      }
       const log: LogRow = { week: w, setIndex, weight: v.weight, reps: v.reps, rir: v.rir, note: v.note ?? "", loggedOn: date };
       setProgram((p) => (p ? withLog(p, ex.id, w, setIndex, log) : p));
       if (ex.restSeconds) setRest({ endsAt: Date.now() + ex.restSeconds * 1000, total: ex.restSeconds });
@@ -106,6 +113,11 @@ export function Workout({ dayId, initialWeek }: { dayId: string; initialWeek: nu
       </nav>
 
       {problem && <ErrorNote>{problem}</ErrorNote>}
+      {banner && (
+        <p role="status" className="mb-4 flex items-center gap-2 rounded-xl bg-primary/15 px-4 py-3 text-sm font-semibold text-primary">
+          <Trophy size={18} /> {banner}
+        </p>
+      )}
 
       <div className="flex flex-col gap-4">
         {day.exercises.map((ex) => (
@@ -159,11 +171,13 @@ function SetRow({ ex, week, index, target, onSave, onUndo }: { ex: ExerciseData;
   const [weight, setWeight] = useState(show(start?.weight));
   const [reps, setReps] = useState(show(start?.reps));
   const [rir, setRir] = useState(existing ? show(existing.rir) : "");
+  const [note, setNote] = useState(existing?.note ?? "");
+  const [showNote, setShowNote] = useState(false);
   const [busy, setBusy] = useState(false);
   const done = !!existing;
   const repsHint = firstNumber(target.reps);
 
-  const values = (): SetValues => ({ weight: toNum(weight), reps: toNum(reps) ?? repsHint, rir: toNum(rir), note: existing?.note ?? "" });
+  const values = (): SetValues => ({ weight: toNum(weight), reps: toNum(reps) ?? repsHint, rir: toNum(rir), note: note.trim() });
 
   async function toggle() {
     primeAudio();
@@ -177,7 +191,7 @@ function SetRow({ ex, week, index, target, onSave, onUndo }: { ex: ExerciseData;
   async function resave() {
     if (!done) return;
     const v = values();
-    if (v.weight === existing.weight && v.reps === existing.reps && v.rir === existing.rir) return;
+    if (v.weight === existing.weight && v.reps === existing.reps && v.rir === existing.rir && v.note === existing.note) return;
     await onSave({ ...ex, restSeconds: null }, index, v);
   }
 
@@ -188,8 +202,13 @@ function SetRow({ ex, week, index, target, onSave, onUndo }: { ex: ExerciseData;
           <span className="font-semibold text-foreground">Serie {index + 1}</span> · {targetText(target)}
         </span>
         {prev && !done && <span className="shrink-0">Antes: {summarizeLog(prev)}</span>}
-        {done && existing.reps === null && existing.weight === null && <span className="shrink-0">{existing.note}</span>}
+        <button onClick={() => setShowNote((x) => !x)} aria-label={`Nota de la serie ${index + 1} de ${ex.name}`} aria-expanded={showNote} className={`-my-3 flex h-11 w-11 shrink-0 items-center justify-center ${note ? "text-primary" : "text-subtle"}`}>
+          <StickyNote size={16} />
+        </button>
       </div>
+      {showNote && (
+        <input className={`${inputBase} mb-2 h-11 w-full text-sm`} aria-label={`Texto de la nota de la serie ${index + 1}`} placeholder="Nota (sensaciones, ajustes…)" value={note} onChange={(e) => setNote(e.target.value)} onBlur={resave} />
+      )}
       <div className="grid grid-cols-[1fr_1fr_4rem_3rem] gap-2">
         <input className={`${inputBase} h-12 text-center ${done ? "bg-primary/10" : ""}`} inputMode="decimal" aria-label={`Peso serie ${index + 1} de ${ex.name} (kg)`} placeholder="kg" value={weight} onChange={(e) => setWeight(e.target.value)} onBlur={resave} />
         <input className={`${inputBase} h-12 text-center ${done ? "bg-primary/10" : ""}`} inputMode="decimal" aria-label={`Repeticiones serie ${index + 1} de ${ex.name}`} placeholder={repsHint ? String(repsHint) : "reps"} value={reps} onChange={(e) => setReps(e.target.value)} onBlur={resave} />

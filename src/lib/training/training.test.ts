@@ -171,3 +171,14 @@ test("parseRestInput acepta mm:ss, minutos y segundos", () => {
   assert.equal(parseRestInput(""), null);
   assert.equal(parseRestInput("abc"), null);
 });
+
+import { isRecord } from "./progress.ts";
+
+test("isRecord solo avisa si supera el mejor 1RM previo", () => {
+  const e = ex([log(1, 0, 40, 8), log(1, 1, 30, 8)]);
+  assert.equal(isRecord(e, 2, 0, { weight: 45, reps: 8 }), true);
+  assert.equal(isRecord(e, 2, 0, { weight: 40, reps: 8 }), false); // igualar no es récord
+  assert.equal(isRecord(e, 1, 0, { weight: 41, reps: 8 }), true); // corrigiendo la propia serie
+  assert.equal(isRecord(ex([]), 1, 0, { weight: 40, reps: 8 }), false); // primera vez
+  assert.equal(isRecord(e, 2, 0, { weight: null, reps: 10 }), false);
+});

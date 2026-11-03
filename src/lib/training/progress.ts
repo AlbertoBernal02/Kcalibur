@@ -43,3 +43,12 @@ export function weeklyVolume(p: ProgramData): { week: number; kg: number }[] {
     kg: Math.round(p.days.flatMap((d) => d.exercises).flatMap((e) => e.logs).filter((l) => l.week === week).reduce((s, l) => s + (l.weight ?? 0) * (l.reps ?? 0), 0)),
   }));
 }
+
+// ¿Esta serie supera el mejor 1RM estimado de ese ejercicio? Solo cuenta si ya había registros con peso
+// (si no, todo sería "récord"); se ignora lo que hubiera en esa misma serie.
+export function isRecord(ex: ExerciseData, week: number, setIndex: number, v: { weight: number | null; reps: number | null }): boolean {
+  if (!v.weight || !v.reps) return false;
+  const others = ex.logs.filter((l) => l.weight && l.reps && !(l.week === week && l.setIndex === setIndex));
+  if (others.length === 0) return false;
+  return est1RM(v.weight, v.reps) > Math.max(...others.map((l) => est1RM(l.weight!, l.reps!)));
+}
